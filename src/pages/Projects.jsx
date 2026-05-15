@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/pocketbaseClient';
+import { base44 } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, FolderOpen, MapPin, Calendar, ChevronRight } from 'lucide-react';

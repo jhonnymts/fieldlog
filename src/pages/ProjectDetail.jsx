@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/pocketbaseClient';
+import { base44 } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, FileText, ClipboardCheck, AlertTriangle, MapPin, Calendar, Hash } from 'lucide-react';

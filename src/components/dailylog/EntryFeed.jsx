@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/pocketbaseClient';
+import { base44 } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Pencil, Trash2, Check, X, Clock, Sparkles, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';

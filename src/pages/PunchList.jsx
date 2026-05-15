@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/pocketbaseClient';
+import { base44 } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, FileDown, AlertTriangle, Sparkles, Loader2, X } from 'lucide-react';

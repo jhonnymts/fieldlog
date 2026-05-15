@@ -27,5 +27,3 @@ Run the app: `npm run dev`
 **Note**
 
 This ZIP was reconstructed manually from the Base44 editor source shown in ChatGPT. No `manifest.json` was visible in the Base44 file tree.
-# fieldlog
-# fieldlog
