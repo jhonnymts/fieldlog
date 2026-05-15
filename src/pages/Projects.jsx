@@ -12,7 +12,7 @@ export default function Projects() {
   const [showForm, setShowForm] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list('-created_date') });
+  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list('-created') });
   const createMutation = useMutation({ mutationFn: (data) => base44.entities.Project.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['projects'] }); setShowForm(false); } });
 
   const activityColors = { FAT: 'bg-blue-500/20 text-blue-400', SAT: 'bg-emerald-500/20 text-emerald-400', 'T&C': 'bg-amber-500/20 text-amber-400', Commissioning: 'bg-purple-500/20 text-purple-400' };

@@ -24,8 +24,11 @@ async function sbFetch(table, options = {}) {
     'apikey': SB_KEY,
     'Authorization': `Bearer ${SB_KEY}`,
     'Content-Type': 'application/json',
-    'Prefer': method === 'POST' ? 'return=representation' : method === 'PATCH' ? 'return=representation' : '',
+    'Accept': 'application/json',
   };
+
+  if (method === 'POST') headers['Prefer'] = 'return=representation';
+  if (method === 'PATCH') headers['Prefer'] = 'return=representation';
 
   const res = await fetch(url.toString(), {
     method,
@@ -35,7 +38,7 @@ async function sbFetch(table, options = {}) {
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err.message || err.error || `Supabase error ${res.status}`);
+    throw new Error(err.message || err.hint || err.error || `Supabase error ${res.status}: ${res.statusText}`);
   }
 
   if (res.status === 204) return null;
@@ -73,14 +76,17 @@ function createEntityClient(table) {
       const params = { select: '*' };
       const order = buildOrderParam(sortField);
       if (order) params.order = order;
-      return sbFetch(table, { params });
+      const result = await sbFetch(table, { params });
+      return Array.isArray(result) ? result : [];
     },
 
     async filter(filterObj, sortField) {
       const params = { select: '*', ...buildFilterParams(filterObj) };
       const order = buildOrderParam(sortField);
       if (order) params.order = order;
-      return sbFetch(table, { params });
+      const result = await sbFetch(table, { params });
+      // Supabase always returns an array — return it directly
+      return Array.isArray(result) ? result : [];
     },
 
     async create(payload) {
