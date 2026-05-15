@@ -1,0 +1,10 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+const Card = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); Card.displayName="Card";
+const CardHeader = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); CardHeader.displayName="CardHeader";
+const CardFooter = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); CardFooter.displayName="CardFooter";
+const CardTitle = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); CardTitle.displayName="CardTitle";
+const CardDescription = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); CardDescription.displayName="CardDescription";
+const CardContent = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); CardContent.displayName="CardContent";
+export { Card, CardHeader, CardFooter, CardTitle, CardDescription, CardContent };

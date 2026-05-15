@@ -1,0 +1,52 @@
+{
+  "name": "Asset",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "Reference to the project"
+    },
+    "asset_id": {
+      "type": "string",
+      "description": "Asset identifier (e.g. 3725-1)"
+    },
+    "asset_name": {
+      "type": "string",
+      "description": "Name of the asset"
+    },
+    "asset_type": {
+      "type": "string",
+      "enum": [
+        "Tank",
+        "Valve",
+        "Drive",
+        "Panel",
+        "Instrument",
+        "Other"
+      ],
+      "description": "Type of asset"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Complete",
+        "Open Issue",
+        "Failed",
+        "Deferred",
+        "Locked by Client",
+        "In Progress"
+      ],
+      "default": "In Progress",
+      "description": "Current status"
+    },
+    "notes": {
+      "type": "string",
+      "description": "Additional notes"
+    }
+  },
+  "required": [
+    "project_id",
+    "asset_id",
+    "asset_name"
+  ]
+}

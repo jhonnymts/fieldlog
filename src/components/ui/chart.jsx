@@ -1,0 +1,10 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+const ChartContainer = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartContainer.displayName="ChartContainer";
+const ChartTooltip = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartTooltip.displayName="ChartTooltip";
+const ChartTooltipContent = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartTooltipContent.displayName="ChartTooltipContent";
+const ChartLegend = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartLegend.displayName="ChartLegend";
+const ChartLegendContent = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartLegendContent.displayName="ChartLegendContent";
+const ChartStyle = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); ChartStyle.displayName="ChartStyle";
+export { ChartContainer, ChartTooltip, ChartTooltipContent, ChartLegend, ChartLegendContent, ChartStyle };

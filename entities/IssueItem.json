@@ -1,0 +1,40 @@
+{
+  "name": "IssueItem",
+  "type": "object",
+  "properties": {
+    "daily_log_id": {
+      "type": "string",
+      "description": "Reference to the daily log"
+    },
+    "issue_number": {
+      "type": "number",
+      "description": "Sequential issue number"
+    },
+    "description": {
+      "type": "string",
+      "description": "Issue description"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "In Progress",
+        "Closed"
+      ],
+      "default": "Open"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Person responsible"
+    },
+    "target_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Target resolution date"
+    }
+  },
+  "required": [
+    "daily_log_id",
+    "description"
+  ]
+}

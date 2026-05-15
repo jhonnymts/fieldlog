@@ -1,0 +1,118 @@
+-- FieldLog PocketBase Schema
+-- Run this in PocketBase Admin UI → Settings → Run SQL
+-- OR create each collection manually via Collections → New Collection
+--
+-- NOTE: PocketBase doesn't use SQL for collection creation from the UI.
+-- This file is structured as a reference for manual collection setup.
+-- Use the STEP-BY-STEP section below in the Admin UI.
+-- The JSON import blocks are for PocketBase's "Import Collections" feature
+-- (Admin → Collections → Import).
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- OPTION A: Import via Admin UI → Collections → Import Collections
+-- Paste the JSON below (all at once) into the Import dialog
+-- ─────────────────────────────────────────────────────────────────────────────
+
+-- [
+--   {
+--     "name": "projects",
+--     "type": "base",
+--     "fields": [
+--       {"name": "project_name",   "type": "text",   "required": true},
+--       {"name": "client_name",    "type": "text"},
+--       {"name": "location",       "type": "text"},
+--       {"name": "project_number", "type": "text"},
+--       {"name": "activity_type",  "type": "select", "required": true,
+--        "options": {"values": ["FAT","SAT","T&C","Commissioning"]}},
+--       {"name": "start_date",     "type": "text"}
+--     ]
+--   },
+--   {
+--     "name": "daily_logs",
+--     "type": "base",
+--     "fields": [
+--       {"name": "project_id",        "type": "text", "required": true},
+--       {"name": "log_date",          "type": "text", "required": true},
+--       {"name": "executive_summary", "type": "text"},
+--       {"name": "lookahead",         "type": "text"}
+--     ]
+--   },
+--   {
+--     "name": "log_entries",
+--     "type": "base",
+--     "fields": [
+--       {"name": "daily_log_id", "type": "text",   "required": true},
+--       {"name": "time_stamp",   "type": "text",   "required": true},
+--       {"name": "content",      "type": "text",   "required": true},
+--       {"name": "sort_order",   "type": "number"}
+--     ]
+--   },
+--   {
+--     "name": "issue_items",
+--     "type": "base",
+--     "fields": [
+--       {"name": "daily_log_id",  "type": "text",   "required": true},
+--       {"name": "issue_number",  "type": "number"},
+--       {"name": "description",   "type": "text",   "required": true},
+--       {"name": "status",        "type": "select",
+--        "options": {"values": ["Open","In Progress","Closed"]}},
+--       {"name": "owner",         "type": "text"},
+--       {"name": "target_date",   "type": "text"}
+--     ]
+--   },
+--   {
+--     "name": "assets",
+--     "type": "base",
+--     "fields": [
+--       {"name": "project_id",  "type": "text", "required": true},
+--       {"name": "asset_id",    "type": "text", "required": true},
+--       {"name": "asset_name",  "type": "text", "required": true},
+--       {"name": "asset_type",  "type": "select",
+--        "options": {"values": ["Tank","Valve","Drive","Panel","Instrument","Other"]}},
+--       {"name": "status",      "type": "select",
+--        "options": {"values": ["Complete","Open Issue","Failed","Deferred","Locked by Client","In Progress"]}},
+--       {"name": "notes",       "type": "text"}
+--     ]
+--   },
+--   {
+--     "name": "punch_items",
+--     "type": "base",
+--     "fields": [
+--       {"name": "project_id",   "type": "text", "required": true},
+--       {"name": "item_number",  "type": "number"},
+--       {"name": "description",  "type": "text", "required": true},
+--       {"name": "status",       "type": "select",
+--        "options": {"values": ["Open","In Progress","Closed"]}},
+--       {"name": "owner",        "type": "text"},
+--       {"name": "target_date",  "type": "text"},
+--       {"name": "date_closed",  "type": "text"}
+--     ]
+--   }
+-- ]
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- OPTION B: Manual collection creation (Admin UI → Collections → New Collection)
+-- ─────────────────────────────────────────────────────────────────────────────
+-- Create each collection as "Base" type with the fields listed above.
+-- For API Rules on every collection, set ALL rules to empty string ""
+-- (allows full public read/write — appropriate since the app has its own password gate).
+-- Fields summary:
+--
+-- projects:    project_name(text*), client_name(text), location(text),
+--              project_number(text), activity_type(select*), start_date(text)
+--
+-- daily_logs:  project_id(text*), log_date(text*),
+--              executive_summary(text), lookahead(text)
+--
+-- log_entries: daily_log_id(text*), time_stamp(text*), content(text*), sort_order(number)
+--
+-- issue_items: daily_log_id(text*), issue_number(number), description(text*),
+--              status(select), owner(text), target_date(text)
+--
+-- assets:      project_id(text*), asset_id(text*), asset_name(text*),
+--              asset_type(select), status(select), notes(text)
+--
+-- punch_items: project_id(text*), item_number(number), description(text*),
+--              status(select), owner(text), target_date(text), date_closed(text)
+--
+-- * = required field

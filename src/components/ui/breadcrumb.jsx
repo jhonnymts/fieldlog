@@ -1,0 +1,11 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+const Breadcrumb = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); Breadcrumb.displayName="Breadcrumb";
+const BreadcrumbList = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbList.displayName="BreadcrumbList";
+const BreadcrumbItem = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbItem.displayName="BreadcrumbItem";
+const BreadcrumbLink = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbLink.displayName="BreadcrumbLink";
+const BreadcrumbPage = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbPage.displayName="BreadcrumbPage";
+const BreadcrumbSeparator = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbSeparator.displayName="BreadcrumbSeparator";
+const BreadcrumbEllipsis = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); BreadcrumbEllipsis.displayName="BreadcrumbEllipsis";
+export { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbPage, BreadcrumbSeparator, BreadcrumbEllipsis };

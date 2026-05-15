@@ -1,0 +1,46 @@
+{
+  "name": "PunchItem",
+  "type": "object",
+  "properties": {
+    "project_id": {
+      "type": "string",
+      "description": "Reference to the project"
+    },
+    "item_number": {
+      "type": "number",
+      "description": "Sequential item number"
+    },
+    "description": {
+      "type": "string",
+      "description": "Description of the punch item"
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "Open",
+        "In Progress",
+        "Closed"
+      ],
+      "default": "Open",
+      "description": "Current status"
+    },
+    "owner": {
+      "type": "string",
+      "description": "Person responsible"
+    },
+    "target_date": {
+      "type": "string",
+      "format": "date",
+      "description": "Target completion date"
+    },
+    "date_closed": {
+      "type": "string",
+      "format": "date",
+      "description": "Actual closure date"
+    }
+  },
+  "required": [
+    "project_id",
+    "description"
+  ]
+}

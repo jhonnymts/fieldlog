@@ -1,0 +1,13 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+const navigationMenuTriggerStyle = cva("inline-flex items-center justify-center rounded-md px-3 py-2 text-sm font-medium");
+const NavigationMenu = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenu.displayName="NavigationMenu";
+const NavigationMenuList = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuList.displayName="NavigationMenuList";
+const NavigationMenuItem = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuItem.displayName="NavigationMenuItem";
+const NavigationMenuContent = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuContent.displayName="NavigationMenuContent";
+const NavigationMenuTrigger = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuTrigger.displayName="NavigationMenuTrigger";
+const NavigationMenuLink = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuLink.displayName="NavigationMenuLink";
+const NavigationMenuIndicator = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuIndicator.displayName="NavigationMenuIndicator";
+const NavigationMenuViewport = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); NavigationMenuViewport.displayName="NavigationMenuViewport";
+export { navigationMenuTriggerStyle, NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuContent, NavigationMenuTrigger, NavigationMenuLink, NavigationMenuIndicator, NavigationMenuViewport };

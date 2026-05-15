@@ -1,0 +1,15 @@
+import * as React from "react";
+import { cn } from "@/lib/utils";
+import { cva } from "class-variance-authority";
+const AlertDialog = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialog.displayName="AlertDialog";
+const AlertDialogPortal = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogPortal.displayName="AlertDialogPortal";
+const AlertDialogOverlay = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogOverlay.displayName="AlertDialogOverlay";
+const AlertDialogTrigger = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogTrigger.displayName="AlertDialogTrigger";
+const AlertDialogContent = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogContent.displayName="AlertDialogContent";
+const AlertDialogHeader = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogHeader.displayName="AlertDialogHeader";
+const AlertDialogFooter = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogFooter.displayName="AlertDialogFooter";
+const AlertDialogTitle = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogTitle.displayName="AlertDialogTitle";
+const AlertDialogDescription = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogDescription.displayName="AlertDialogDescription";
+const AlertDialogAction = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogAction.displayName="AlertDialogAction";
+const AlertDialogCancel = React.forwardRef((props, ref) => { const { className, children, ...rest } = props; return <div ref={ref} className={cn(className)} {...rest}>{children}</div>; }); AlertDialogCancel.displayName="AlertDialogCancel";
+export { AlertDialog, AlertDialogPortal, AlertDialogOverlay, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogFooter, AlertDialogTitle, AlertDialogDescription, AlertDialogAction, AlertDialogCancel };
