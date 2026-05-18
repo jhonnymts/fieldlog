@@ -43,8 +43,8 @@ export default function DailyLogDetail() {
 
   const handleGenerateReport = () => {
     if (!project || !log) return;
-    const { companyName, engineerName } = getSettings();
-    generateDailyReportPDF({ project, log, entries, issues, companyName: companyName || engineerName || '' });
+    const { companyName, engineerName, logoDataUrl } = getSettings();
+    generateDailyReportPDF({ project, log, entries, issues, companyName: companyName || engineerName || '', logoDataUrl });
   };
 
   if (!log || !project) return (

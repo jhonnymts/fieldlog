@@ -31,8 +31,8 @@ export default function PunchList() {
 
   const handleExportPDF = () => {
     if (!project) return;
-    const { companyName, engineerName } = getSettings();
-    generatePunchListPDF({ project, items, companyName: companyName || engineerName || '' });
+    const { companyName, engineerName, logoDataUrl } = getSettings();
+    generatePunchListPDF({ project, items, companyName: companyName || engineerName || '', logoDataUrl });
   };
 
   const handleDraftNarrative = async () => {
