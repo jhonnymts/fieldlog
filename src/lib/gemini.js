@@ -6,7 +6,8 @@
  */
 
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
+const GEMINI_MODEL = 'gemini-2.0-flash-lite';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
 
 /**
  * Core call — takes a prompt string, returns the text response.
