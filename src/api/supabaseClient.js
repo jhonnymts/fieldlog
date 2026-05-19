@@ -1,33 +1,37 @@
 /**
- * Supabase client adapter
- * Drop-in replacement for pocketbaseClient.js
- * Uses Supabase REST API directly — no SDK needed.
- * Same entity API shape: .filter(), .list(), .create(), .update(), .delete(), .bulkCreate()
- *
- * Env vars required:
- *   VITE_SUPABASE_URL  — e.g. https://xyzxyzxyz.supabase.co
- *   VITE_SUPABASE_ANON_KEY — the anon/public key from Supabase project settings
+ * Supabase client
+ * Uses @supabase/supabase-js for auth session management.
+ * The same entity API shape is preserved: .filter(), .list(), .create(), .update(), .delete(), .bulkCreate()
+ * Auth token is automatically attached to every request via the SDK session.
  */
+
+import { createClient } from '@supabase/supabase-js';
 
 const SB_URL = import.meta.env.VITE_SUPABASE_URL;
 const SB_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-// ─── Low-level fetch helper ───────────────────────────────────────────────────
+// ─── Supabase JS client (used for auth + RLS-aware requests) ──────────────────
+export const supabase = createClient(SB_URL, SB_KEY);
 
+// ─── Low-level fetch helper — uses SDK session token automatically ─────────────
 async function sbFetch(table, options = {}) {
   const { path = '', method = 'GET', body, params } = options;
+
+  // Get current session token from SDK
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token ?? SB_KEY;
 
   const url = new URL(`${SB_URL}/rest/v1/${table}${path}`);
   if (params) Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
 
   const headers = {
-    'apikey': SB_KEY,
-    'Authorization': `Bearer ${SB_KEY}`,
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
+    'apikey':        SB_KEY,
+    'Authorization': `Bearer ${token}`,
+    'Content-Type':  'application/json',
+    'Accept':        'application/json',
   };
 
-  if (method === 'POST') headers['Prefer'] = 'return=representation';
+  if (method === 'POST')  headers['Prefer'] = 'return=representation';
   if (method === 'PATCH') headers['Prefer'] = 'return=representation';
 
   const res = await fetch(url.toString(), {
@@ -46,9 +50,6 @@ async function sbFetch(table, options = {}) {
 }
 
 // ─── Build Supabase filter params from a plain object ─────────────────────────
-// e.g. { project_id: "abc" } → { project_id: "eq.abc" }
-// e.g. { id: "abc" }        → { id: "eq.abc" }
-
 function buildFilterParams(filterObj) {
   if (!filterObj) return {};
   return Object.fromEntries(
@@ -58,10 +59,7 @@ function buildFilterParams(filterObj) {
   );
 }
 
-// ─── Map sort field from PocketBase syntax to Supabase syntax ─────────────────
-// PocketBase: 'sort_order' or '-created'
-// Supabase:   'order=sort_order.asc' or 'order=created.desc'
-
+// ─── Map sort field ────────────────────────────────────────────────────────────
 function buildOrderParam(sortField) {
   if (!sortField) return null;
   if (sortField.startsWith('-')) return `${sortField.slice(1)}.desc`;
@@ -69,7 +67,6 @@ function buildOrderParam(sortField) {
 }
 
 // ─── Entity factory ───────────────────────────────────────────────────────────
-
 function createEntityClient(table) {
   return {
     async list(sortField) {
@@ -85,13 +82,11 @@ function createEntityClient(table) {
       const order = buildOrderParam(sortField);
       if (order) params.order = order;
       const result = await sbFetch(table, { params });
-      // Supabase always returns an array — return it directly
       return Array.isArray(result) ? result : [];
     },
 
     async create(payload) {
       const result = await sbFetch(table, { method: 'POST', body: payload });
-      // Supabase returns array on insert — return first item
       return Array.isArray(result) ? result[0] : result;
     },
 
@@ -123,7 +118,6 @@ function createEntityClient(table) {
 }
 
 // ─── FieldLog client ──────────────────────────────────────────────────────────
-
 export const fieldlog = {
   entities: {
     Project:   createEntityClient('projects'),
@@ -132,5 +126,6 @@ export const fieldlog = {
     IssueItem: createEntityClient('issue_items'),
     Asset:     createEntityClient('assets'),
     PunchItem: createEntityClient('punch_items'),
+    UserProfile: createEntityClient('user_profiles'),
   },
 };

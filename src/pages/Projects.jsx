@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { fieldlog } from '@/api/supabaseClient';
+import { useAuth } from '@/lib/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, FolderOpen, MapPin, Calendar, ChevronRight, Trash2 } from 'lucide-react';
@@ -41,13 +42,23 @@ async function deleteProjectWithRelatedRecords(projectId) {
 export default function Projects() {
   const [showForm, setShowForm] = useState(false);
   const queryClient = useQueryClient();
+  const { user } = useAuth();
 
-  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => fieldlog.entities.Project.list('-created') });
-  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.Project.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['projects'] }); setShowForm(false); } });
+  const { data: projects = [], isLoading } = useQuery({
+    queryKey: ['projects', user?.id],
+    queryFn: () => fieldlog.entities.Project.filter({ user_id: user.id }, '-created'),
+    enabled: !!user,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: (data) => fieldlog.entities.Project.create({ ...data, user_id: user.id }),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['projects', user?.id] }); setShowForm(false); },
+  });
+
   const deleteMutation = useMutation({
     mutationFn: deleteProjectWithRelatedRecords,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['projects', user?.id] });
       toast.success('Project deleted');
     },
     onError: (error) => toast.error(error?.message || 'Unable to delete project'),
