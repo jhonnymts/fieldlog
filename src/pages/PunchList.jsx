@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, FileDown, AlertTriangle, Sparkles, Loader2, X } from 'lucide-react';
@@ -23,11 +23,11 @@ export default function PunchList() {
   const [loadingNarrative, setLoadingNarrative] = useState(false);
   const [narrativeError, setNarrativeError] = useState('');
 
-  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const r = await base44.entities.Project.filter({ id: projectId }); return r[0]; } });
-  const { data: items = [], isLoading } = useQuery({ queryKey: ['punchItems', projectId], queryFn: () => base44.entities.PunchItem.filter({ project_id: projectId }, 'item_number') });
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.PunchItem.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }); setShowForm(false); } });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.PunchItem.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }) });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.PunchItem.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }) });
+  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const r = await fieldlog.entities.Project.filter({ id: projectId }); return r[0]; } });
+  const { data: items = [], isLoading } = useQuery({ queryKey: ['punchItems', projectId], queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }, 'item_number') });
+  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.PunchItem.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }); setShowForm(false); } });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => fieldlog.entities.PunchItem.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }) });
+  const deleteMutation = useMutation({ mutationFn: (id) => fieldlog.entities.PunchItem.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }) });
 
   const handleExportPDF = () => {
     if (!project) return;

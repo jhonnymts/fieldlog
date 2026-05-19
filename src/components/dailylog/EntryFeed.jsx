@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Pencil, Trash2, Check, X, Clock, Sparkles, Loader2 } from 'lucide-react';
+import { Plus, Pencil, Trash2, Check, X, Clock, Sparkles, Loader2, ArrowUpRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cleanupEntry } from '@/lib/gemini';
 
-export default function EntryFeed({ logId, entries }) {
+export default function EntryFeed({ logId, projectId, entries, punchItems = [] }) {
   const queryClient = useQueryClient();
   const [newEntry, setNewEntry] = useState('');
   const [editingId, setEditingId] = useState(null);
@@ -15,21 +15,57 @@ export default function EntryFeed({ logId, entries }) {
   const [editTime, setEditTime] = useState('');
   const [cleaningUp, setCleaningUp] = useState(false);
   const [cleaningEditId, setCleaningEditId] = useState(null);
+  const [promotingId, setPromotingId] = useState(null);
+  const [promotedIds, setPromotedIds] = useState(new Set());
 
   const createMutation = useMutation({
-    mutationFn: (data) => base44.entities.LogEntry.create(data),
+    mutationFn: (data) => fieldlog.entities.LogEntry.create(data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }); setNewEntry(''); },
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.LogEntry.update(id, data),
+    mutationFn: ({ id, data }) => fieldlog.entities.LogEntry.update(id, data),
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }); setEditingId(null); },
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id) => base44.entities.LogEntry.delete(id),
+    mutationFn: (id) => fieldlog.entities.LogEntry.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }),
   });
+
+  const promoteMutation = useMutation({
+    mutationFn: async (entry) => {
+      const existing = await fieldlog.entities.PunchItem.filter({ project_id: projectId });
+      const nextNum = (existing?.length ?? 0) + 1;
+      return fieldlog.entities.PunchItem.create({
+        project_id: projectId,
+        item_number: nextNum,
+        description: entry.content,
+        status: 'Open',
+        owner: '',
+        target_date: '',
+      });
+    },
+    onSuccess: (_, entry) => {
+      setPromotedIds((prev) => new Set([...prev, entry.id]));
+      setPromotingId(null);
+      queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] });
+    },
+    onError: () => setPromotingId(null),
+  });
+
+  // An entry is already on the punch list if its text matches an existing punch item
+  const isAlreadyPromoted = (entry) =>
+    promotedIds.has(entry.id) ||
+    punchItems.some(
+      (p) => p.description?.trim().toLowerCase() === entry.content?.trim().toLowerCase()
+    );
+
+  const handlePromote = (entry) => {
+    if (isAlreadyPromoted(entry) || promotingId) return;
+    setPromotingId(entry.id);
+    promoteMutation.mutate(entry);
+  };
 
   const handleAdd = () => {
     if (!newEntry.trim()) return;
@@ -176,6 +212,26 @@ export default function EntryFeed({ logId, entries }) {
                   <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
+                  {/* Promote to Punch List */}
+                  {isAlreadyPromoted(entry) ? (
+                    <span
+                      title="On Punch List"
+                      className="p-1.5 text-amber-400"
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handlePromote(entry)}
+                      disabled={promotingId === entry.id}
+                      className="p-1.5 text-muted-foreground hover:text-primary transition-colors disabled:opacity-40"
+                      title="Promote to Punch List"
+                    >
+                      {promotingId === entry.id
+                        ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        : <ArrowUpRight className="h-3.5 w-3.5" />}
+                    </button>
+                  )}
                   <button onClick={() => startEdit(entry)} className="p-1.5 text-muted-foreground hover:text-foreground transition-colors" title="Edit entry">
                     <Pencil className="h-3.5 w-3.5" />
                   </button>

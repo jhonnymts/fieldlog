@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, FileText, ClipboardCheck, AlertTriangle, MapPin, Calendar, Hash } from 'lucide-react';
@@ -7,7 +7,7 @@ import { format } from 'date-fns';
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
-  const { data: project, isLoading } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await base44.entities.Project.filter({ id: projectId }); return projects[0]; } });
+  const { data: project, isLoading } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await fieldlog.entities.Project.filter({ id: projectId }); return projects[0]; } });
   if (isLoading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
   if (!project) return <div className="max-w-4xl mx-auto px-4 py-6"><p className="text-muted-foreground">Project not found.</p></div>;
 

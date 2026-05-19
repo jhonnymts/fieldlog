@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, FileText, Calendar } from 'lucide-react';
@@ -13,9 +13,9 @@ export default function DailyLogs() {
   const queryClient = useQueryClient();
   const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
 
-  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await base44.entities.Project.filter({ id: projectId }); return projects[0]; } });
-  const { data: logs = [], isLoading } = useQuery({ queryKey: ['dailyLogs', projectId], queryFn: () => base44.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.DailyLog.create(data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dailyLogs', projectId] }) });
+  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await fieldlog.entities.Project.filter({ id: projectId }); return projects[0]; } });
+  const { data: logs = [], isLoading } = useQuery({ queryKey: ['dailyLogs', projectId], queryFn: () => fieldlog.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
+  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.DailyLog.create(data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dailyLogs', projectId] }) });
 
   const handleCreateLog = () => { const exists = logs.find((l) => l.log_date === newDate); if (exists) return; createMutation.mutate({ project_id: projectId, log_date: newDate }); };
   if (isLoading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;

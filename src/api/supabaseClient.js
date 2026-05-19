@@ -122,9 +122,9 @@ function createEntityClient(table) {
   };
 }
 
-// ─── Exported client — same shape as pocketbaseClient ────────────────────────
+// ─── FieldLog client ──────────────────────────────────────────────────────────
 
-export const sb = {
+export const fieldlog = {
   entities: {
     Project:   createEntityClient('projects'),
     DailyLog:  createEntityClient('daily_logs'),
@@ -134,6 +134,3 @@ export const sb = {
     PunchItem: createEntityClient('punch_items'),
   },
 };
-
-// Re-export as `base44` so all existing page imports work without any changes
-export const base44 = sb;

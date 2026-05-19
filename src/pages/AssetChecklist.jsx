@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Plus, Upload, ClipboardCheck } from 'lucide-react';
@@ -17,12 +17,12 @@ export default function AssetChecklist() {
   const [filter, setFilter] = useState('all');
   const fileInputRef = useRef(null);
 
-  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await base44.entities.Project.filter({ id: projectId }); return projects[0]; } });
-  const { data: assets = [], isLoading } = useQuery({ queryKey: ['assets', projectId], queryFn: () => base44.entities.Asset.filter({ project_id: projectId }) });
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.Asset.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', projectId] }); setShowForm(false); } });
-  const bulkCreateMutation = useMutation({ mutationFn: (data) => base44.entities.Asset.bulkCreate(data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
-  const updateMutation = useMutation({ mutationFn: ({ id, data }) => base44.entities.Asset.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
-  const deleteMutation = useMutation({ mutationFn: (id) => base44.entities.Asset.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
+  const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await fieldlog.entities.Project.filter({ id: projectId }); return projects[0]; } });
+  const { data: assets = [], isLoading } = useQuery({ queryKey: ['assets', projectId], queryFn: () => fieldlog.entities.Asset.filter({ project_id: projectId }) });
+  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.Asset.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['assets', projectId] }); setShowForm(false); } });
+  const bulkCreateMutation = useMutation({ mutationFn: (data) => fieldlog.entities.Asset.bulkCreate(data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
+  const updateMutation = useMutation({ mutationFn: ({ id, data }) => fieldlog.entities.Asset.update(id, data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
+  const deleteMutation = useMutation({ mutationFn: (id) => fieldlog.entities.Asset.delete(id), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['assets', projectId] }) });
 
   const handleCSVImport = (e) => {
     const file = e.target.files?.[0];

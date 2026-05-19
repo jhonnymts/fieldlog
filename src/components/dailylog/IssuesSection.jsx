@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Plus, Trash2, ArrowUpRight, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,7 @@ export default function IssuesSection({ logId, projectId, issues, punchItems = [
   const [form, setForm] = useState({ description: '', status: 'Open', owner: '', target_date: '' });
 
   const createIssueMutation = useMutation({
-    mutationFn: (data) => base44.entities.IssueItem.create(data),
+    mutationFn: (data) => fieldlog.entities.IssueItem.create(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['logIssues', logId] });
       setForm({ description: '', status: 'Open', owner: '', target_date: '' });
@@ -23,21 +23,21 @@ export default function IssuesSection({ logId, projectId, issues, punchItems = [
   });
 
   const updateIssueMutation = useMutation({
-    mutationFn: ({ id, data }) => base44.entities.IssueItem.update(id, data),
+    mutationFn: ({ id, data }) => fieldlog.entities.IssueItem.update(id, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['logIssues', logId] }),
   });
 
   const deleteIssueMutation = useMutation({
-    mutationFn: (id) => base44.entities.IssueItem.delete(id),
+    mutationFn: (id) => fieldlog.entities.IssueItem.delete(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['logIssues', logId] }),
   });
 
   const promoteMutation = useMutation({
     mutationFn: async (issue) => {
       // Get current punch count to assign next item_number
-      const existing = await base44.entities.PunchItem.filter({ project_id: projectId });
+      const existing = await fieldlog.entities.PunchItem.filter({ project_id: projectId });
       const nextNum = (existing?.length ?? 0) + 1;
-      return base44.entities.PunchItem.create({
+      return fieldlog.entities.PunchItem.create({
         project_id: projectId,
         item_number: nextNum,
         description: issue.description,

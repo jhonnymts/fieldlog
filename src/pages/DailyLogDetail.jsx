@@ -1,5 +1,5 @@
 import React from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, FileDown } from 'lucide-react';
@@ -17,27 +17,27 @@ export default function DailyLogDetail() {
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: async () => { const r = await base44.entities.Project.filter({ id: projectId }); return r[0]; },
+    queryFn: async () => { const r = await fieldlog.entities.Project.filter({ id: projectId }); return r[0]; },
   });
   const { data: log } = useQuery({
     queryKey: ['dailyLog', logId],
-    queryFn: async () => { const r = await base44.entities.DailyLog.filter({ id: logId }); return r[0]; },
+    queryFn: async () => { const r = await fieldlog.entities.DailyLog.filter({ id: logId }); return r[0]; },
   });
   const { data: entries = [] } = useQuery({
     queryKey: ['logEntries', logId],
-    queryFn: () => base44.entities.LogEntry.filter({ daily_log_id: logId }, 'sort_order'),
+    queryFn: () => fieldlog.entities.LogEntry.filter({ daily_log_id: logId }, 'sort_order'),
   });
   const { data: issues = [] } = useQuery({
     queryKey: ['logIssues', logId],
-    queryFn: () => base44.entities.IssueItem.filter({ daily_log_id: logId }, 'issue_number'),
+    queryFn: () => fieldlog.entities.IssueItem.filter({ daily_log_id: logId }, 'issue_number'),
   });
   const { data: punchItems = [] } = useQuery({
     queryKey: ['punchItems', projectId],
-    queryFn: () => base44.entities.PunchItem.filter({ project_id: projectId }, 'item_number'),
+    queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }, 'item_number'),
   });
 
   const updateLogMutation = useMutation({
-    mutationFn: (data) => base44.entities.DailyLog.update(logId, data),
+    mutationFn: (data) => fieldlog.entities.DailyLog.update(logId, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dailyLog', logId] }),
   });
 
@@ -67,7 +67,7 @@ export default function DailyLogDetail() {
           <FileDown className="h-4 w-4 mr-2" /> Export PDF
         </Button>
       </div>
-      <EntryFeed logId={logId} entries={entries} />
+      <EntryFeed logId={logId} projectId={projectId} entries={entries} punchItems={punchItems} />
       <IssuesSection
         logId={logId}
         projectId={projectId}

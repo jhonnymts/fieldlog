@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { base44 } from '@/api/supabaseClient';
+import { fieldlog } from '@/api/supabaseClient';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
 import { Plus, FolderOpen, MapPin, Calendar, ChevronRight, Trash2 } from 'lucide-react';
@@ -10,40 +10,40 @@ import EmptyState from '@/components/shared/EmptyState';
 import ProjectFormDialog from '@/components/projects/ProjectFormDialog';
 
 async function deleteProjectWithRelatedRecords(projectId) {
-  const dailyLogs = await base44.entities.DailyLog.filter({ project_id: projectId });
+  const dailyLogs = await fieldlog.entities.DailyLog.filter({ project_id: projectId });
 
   for (const log of dailyLogs) {
     const [entries, issues] = await Promise.all([
-      base44.entities.LogEntry.filter({ daily_log_id: log.id }),
-      base44.entities.IssueItem.filter({ daily_log_id: log.id }),
+      fieldlog.entities.LogEntry.filter({ daily_log_id: log.id }),
+      fieldlog.entities.IssueItem.filter({ daily_log_id: log.id }),
     ]);
 
     await Promise.all([
-      ...entries.map((entry) => base44.entities.LogEntry.delete(entry.id)),
-      ...issues.map((issue) => base44.entities.IssueItem.delete(issue.id)),
+      ...entries.map((entry) => fieldlog.entities.LogEntry.delete(entry.id)),
+      ...issues.map((issue) => fieldlog.entities.IssueItem.delete(issue.id)),
     ]);
   }
 
   const [assets, punchItems] = await Promise.all([
-    base44.entities.Asset.filter({ project_id: projectId }),
-    base44.entities.PunchItem.filter({ project_id: projectId }),
+    fieldlog.entities.Asset.filter({ project_id: projectId }),
+    fieldlog.entities.PunchItem.filter({ project_id: projectId }),
   ]);
 
   await Promise.all([
-    ...assets.map((asset) => base44.entities.Asset.delete(asset.id)),
-    ...punchItems.map((item) => base44.entities.PunchItem.delete(item.id)),
-    ...dailyLogs.map((log) => base44.entities.DailyLog.delete(log.id)),
+    ...assets.map((asset) => fieldlog.entities.Asset.delete(asset.id)),
+    ...punchItems.map((item) => fieldlog.entities.PunchItem.delete(item.id)),
+    ...dailyLogs.map((log) => fieldlog.entities.DailyLog.delete(log.id)),
   ]);
 
-  return base44.entities.Project.delete(projectId);
+  return fieldlog.entities.Project.delete(projectId);
 }
 
 export default function Projects() {
   const [showForm, setShowForm] = useState(false);
   const queryClient = useQueryClient();
 
-  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => base44.entities.Project.list('-created') });
-  const createMutation = useMutation({ mutationFn: (data) => base44.entities.Project.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['projects'] }); setShowForm(false); } });
+  const { data: projects = [], isLoading } = useQuery({ queryKey: ['projects'], queryFn: () => fieldlog.entities.Project.list('-created') });
+  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.Project.create(data), onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['projects'] }); setShowForm(false); } });
   const deleteMutation = useMutation({
     mutationFn: deleteProjectWithRelatedRecords,
     onSuccess: () => {
