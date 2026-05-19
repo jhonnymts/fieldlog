@@ -1,42 +1,47 @@
 /**
- * AI helper — powered by Claude (Anthropic)
- * Model: claude-haiku-4-5-20251001 (fast, cost-efficient, ideal for field drafting)
- * API key set via VITE_GEMINI_KEY env var.
- * Get a key at: https://console.anthropic.com
+ * AI helper — powered by Groq
+ * Model: llama-3.1-8b-instant (free tier, ~14,400 req/day)
+ * API key set via VITE_GROQ_KEY env var.
+ * Get a free key at: https://console.groq.com
  *
- * All function signatures are identical to the previous version —
- * no other files need to change.
+ * Groq uses the OpenAI-compatible chat completions API shape.
+ * All function signatures are unchanged — no other files need to change.
  */
 
-const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY;
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`;
-
+const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
+const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const MODEL    = 'llama-3.1-8b-instant';
 
 /**
  * Core call — takes a prompt string, returns the text response.
  * Throws a readable error if the key is missing or the API fails.
  */
-async function geminiPrompt(prompt) {
-  if (!GEMINI_KEY) {
-    throw new Error('No Gemini API key set. Add VITE_GEMINI_KEY to your .env.local file.');
+async function groqPrompt(prompt) {
+  if (!GROQ_KEY) {
+    throw new Error('No Groq API key set. Add VITE_GROQ_KEY to your .env.local file.');
   }
 
-  const res = await fetch(GEMINI_URL, {
+  const res = await fetch(GROQ_URL, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type':  'application/json',
+      'Authorization': `Bearer ${GROQ_KEY}`,
+    },
     body: JSON.stringify({
-      contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.4, maxOutputTokens: 1024 },
+      model:       MODEL,
+      temperature: 0.4,
+      max_tokens:  1024,
+      messages:    [{ role: 'user', content: prompt }],
     }),
   });
 
   if (!res.ok) {
     const err = await res.json().catch(() => ({}));
-    throw new Error(err?.error?.message || `Gemini API error ${res.status}`);
+    throw new Error(err?.error?.message || `Groq API error ${res.status}`);
   }
 
   const data = await res.json();
-  return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+  return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
 // ─── Feature 1: Draft executive summary from activity entries ─────────────────
@@ -65,7 +70,7 @@ Write a concise, professional Executive Summary paragraph (3–5 sentences) suit
 - Do NOT fabricate details not present in the entries above
 - Keep it under 120 words`;
 
-  return geminiPrompt(prompt);
+  return groqPrompt(prompt);
 }
 
 // ─── Feature 2: Draft lookahead from open issues + punch items ────────────────
@@ -99,7 +104,7 @@ Write a concise Lookahead paragraph (2–4 sentences) describing planned activit
 - Do NOT fabricate details not present above
 - Keep it under 80 words`;
 
-  return geminiPrompt(prompt);
+  return groqPrompt(prompt);
 }
 
 // ─── Feature 3: Punch list narrative for formal report inclusion ──────────────
@@ -127,7 +132,7 @@ Write a formal summary paragraph (3–5 sentences) suitable for a project status
 - Do NOT fabricate details not listed above
 - Keep it under 150 words`;
 
-  return geminiPrompt(prompt);
+  return groqPrompt(prompt);
 }
 
 // ─── Feature 4: Clean up a rough field entry into proper log language ─────────
@@ -143,5 +148,5 @@ Convert the following rough field shorthand into a single, professional log entr
 
 Raw entry: "${rawText}"`;
 
-  return geminiPrompt(prompt);
+  return groqPrompt(prompt);
 }
