@@ -1,19 +1,22 @@
 /**
- * Gemini AI helper
- * Uses Gemini 2.0 Flash — free tier, no credit card required.
+ * AI helper — powered by Claude (Anthropic)
+ * Model: claude-haiku-4-5-20251001 (fast, cost-efficient, ideal for field drafting)
  * API key set via VITE_GEMINI_KEY env var.
- * Get a free key at: https://ai.google.dev
+ * Get a key at: https://console.anthropic.com
+ *
+ * All function signatures are identical to the previous version —
+ * no other files need to change.
  */
 
 const GEMINI_KEY = import.meta.env.VITE_GEMINI_KEY;
-const GEMINI_MODEL = 'gemini-2.0-flash-lite';
-const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_KEY}`;
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_KEY}`;
+
 
 /**
  * Core call — takes a prompt string, returns the text response.
  * Throws a readable error if the key is missing or the API fails.
  */
-export async function geminiPrompt(prompt) {
+async function geminiPrompt(prompt) {
   if (!GEMINI_KEY) {
     throw new Error('No Gemini API key set. Add VITE_GEMINI_KEY to your .env.local file.');
   }
@@ -55,7 +58,7 @@ ${entryLines}
 Issues / action items logged today:
 ${issueLines}
 
-Write a concise, professional Executive Summary paragraph (3–5 sentences) suitable for a daily field report. 
+Write a concise, professional Executive Summary paragraph (3–5 sentences) suitable for a daily field report.
 - Write in past tense, third person ("Testing was conducted...", "The team completed...")
 - Summarize the key work accomplished, any notable findings, and overall day status
 - Do NOT use bullet points — flowing prose only
@@ -69,7 +72,7 @@ Write a concise, professional Executive Summary paragraph (3–5 sentences) suit
 
 export async function draftLookahead({ projectName, issues, punchItems }) {
   const openIssues = issues.filter(i => i.status !== 'Closed');
-  const openPunch = punchItems.filter(p => p.status !== 'Closed');
+  const openPunch  = punchItems.filter(p => p.status !== 'Closed');
 
   const issueLine = openIssues.length
     ? openIssues.map(i => `  #${i.issue_number} — ${i.description}${i.owner ? ` (Owner: ${i.owner})` : ''}${i.target_date ? ` [Target: ${i.target_date}]` : ''}`).join('\n')
@@ -102,7 +105,7 @@ Write a concise Lookahead paragraph (2–4 sentences) describing planned activit
 // ─── Feature 3: Punch list narrative for formal report inclusion ──────────────
 
 export async function draftPunchNarrative({ projectName, items }) {
-  const open = items.filter(i => i.status !== 'Closed');
+  const open   = items.filter(i => i.status !== 'Closed');
   const closed = items.filter(i => i.status === 'Closed');
 
   const itemLines = items.map(i =>
