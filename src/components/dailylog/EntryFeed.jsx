@@ -23,10 +23,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }); setNewEntry(''); },
   });
 
-  const updateMutation = useMutation({
-    mutationFn: ({ id, data }) => fieldlog.entities.LogEntry.update(id, data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }); setEditingId(null); },
-  });
+  const [saving, setSaving] = useState(false);
 
   const deleteMutation = useMutation({
     mutationFn: (id) => fieldlog.entities.LogEntry.delete(id),
@@ -67,6 +64,16 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     promoteMutation.mutate(entry);
   };
 
+  // Convert HH:MM string to sortable integer (e.g. "07:45" → 745)
+  const timeToInt = (ts) => {
+    if (!ts) return 0;
+    const [h, m] = ts.split(':').map(Number);
+    return (h || 0) * 100 + (m || 0);
+  };
+
+  // Entries sorted chronologically for display
+  const sortedEntries = [...entries].sort((a, b) => timeToInt(a.time_stamp) - timeToInt(b.time_stamp));
+
   const handleAdd = () => {
     if (!newEntry.trim()) return;
     const now = new Date();
@@ -84,9 +91,41 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     setEditTime(entry.time_stamp);
   };
 
-  const handleSave = (id) => {
+  const handleSave = async (id) => {
     const normalized = editTime.trim().replace(/^(\d):/, '0$1:');
-    updateMutation.mutate({ id, data: { content: editText, time_stamp: normalized || editTime } });
+    const newTime = normalized || editTime;
+
+    setSaving(true);
+    try {
+      // Build the updated list with the edited entry's new time, then sort it
+      // to derive the correct sort_order for every entry in chronological order.
+      const updated = entries.map((e) =>
+        e.id === id ? { ...e, time_stamp: newTime, content: editText } : e
+      );
+      const reordered = [...updated].sort((a, b) => timeToInt(a.time_stamp) - timeToInt(b.time_stamp));
+
+      // Persist the edited entry first, then write sort_order updates for any
+      // entry whose position changed. Fire them in parallel after the primary save.
+      await fieldlog.entities.LogEntry.update(id, { content: editText, time_stamp: newTime });
+
+      const sortUpdates = reordered
+        .map((e, idx) => ({ id: e.id, sort_order: idx + 1 }))
+        .filter(({ id: eid, sort_order }) => {
+          const original = entries.find((e) => e.id === eid);
+          return original && original.sort_order !== sort_order;
+        });
+
+      await Promise.all(
+        sortUpdates.map(({ id: eid, sort_order }) =>
+          fieldlog.entities.LogEntry.update(eid, { sort_order })
+        )
+      );
+
+      queryClient.invalidateQueries({ queryKey: ['logEntries', logId] });
+      setEditingId(null);
+    } finally {
+      setSaving(false);
+    }
   };
 
   // AI cleanup on compose box — cleans the typed text before adding
@@ -156,7 +195,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
 
       {/* Entry list */}
       <div className="space-y-2">
-        {entries.map((entry) => (
+        {sortedEntries.map((entry) => (
           <div key={entry.id} className="bg-card border border-border rounded-lg p-3">
             {editingId === entry.id ? (
               <div className="space-y-2">
@@ -193,7 +232,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
                       : <><Sparkles className="h-3 w-3 mr-1" /> Clean up with AI</>}
                   </Button>
                   <div className="flex gap-2">
-                    <Button size="sm" onClick={() => handleSave(entry.id)} disabled={updateMutation.isPending} className="bg-primary text-primary-foreground h-8">
+                    <Button size="sm" onClick={() => handleSave(entry.id)} disabled={saving} className="bg-primary text-primary-foreground h-8">
                       <Check className="h-3.5 w-3.5 mr-1" /> Save
                     </Button>
                     <Button size="sm" variant="ghost" onClick={() => setEditingId(null)} className="h-8">
