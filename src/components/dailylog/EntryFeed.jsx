@@ -74,11 +74,29 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
   // Entries sorted chronologically for display
   const sortedEntries = [...entries].sort((a, b) => timeToInt(a.time_stamp) - timeToInt(b.time_stamp));
 
+  // Regex: optional leading time in HH:MM or H:MM format, followed by whitespace
+  const TIME_PREFIX_RE = /^(\d{1,2}:\d{2})\s+/;
+
   const handleAdd = () => {
     if (!newEntry.trim()) return;
-    const now = new Date();
-    const timeStamp = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
-    createMutation.mutate({ daily_log_id: logId, content: newEntry.trim(), time_stamp: timeStamp, sort_order: entries.length + 1 });
+
+    let content = newEntry.trim();
+    let timeStamp;
+
+    const match = content.match(TIME_PREFIX_RE);
+    if (match) {
+      // User typed a time prefix — extract and normalize it, strip from content
+      const raw = match[1];
+      const [h, m] = raw.split(':');
+      timeStamp = `${String(h).padStart(2, '0')}:${m}`;
+      content = content.slice(match[0].length).trim();
+      if (!content) return; // don't add an entry with no text
+    } else {
+      // No time prefix — use current real time
+      timeStamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+    }
+
+    createMutation.mutate({ daily_log_id: logId, content, time_stamp: timeStamp, sort_order: entries.length + 1 });
   };
 
   const handleKeyDown = (e) => {
@@ -166,7 +184,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
           value={newEntry}
           onChange={(e) => setNewEntry(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Type an entry... (Enter to add, Shift+Enter for new line)"
+          placeholder="Type an entry... or start with HH:MM to set the time (Enter to add)"
           className="bg-secondary border-border min-h-[48px] max-h-32 resize-none"
           rows={1}
         />
