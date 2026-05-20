@@ -28,7 +28,7 @@ export default function ReportFields({ log, project, entries, issues, punchItems
     setLoadingSummary(true);
     setError('');
     try {
-      const logDate = log?.log_date ? format(new Date(log.log_date), 'EEEE, MMMM d, yyyy') : '';
+      const logDate = log?.log_date ? format(new Date(log.log_date + 'T12:00:00'), 'EEEE, MMMM d, yyyy') : '';
       const text = await draftExecutiveSummary({
         projectName: project?.project_name || '',
         logDate,

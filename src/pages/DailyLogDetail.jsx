@@ -60,7 +60,7 @@ export default function DailyLogDetail() {
       </Link>
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h2 className="text-xl font-bold text-foreground">{format(new Date(log.log_date), 'EEEE, MMM d')}</h2>
+          <h2 className="text-xl font-bold text-foreground">{format(new Date(log.log_date + 'T12:00:00'), 'EEEE, MMM d')}</h2>
           <p className="text-sm text-muted-foreground">{project.project_name}</p>
         </div>
         <Button onClick={handleGenerateReport} className="bg-primary text-primary-foreground hover:bg-primary/90 h-11 font-semibold">
