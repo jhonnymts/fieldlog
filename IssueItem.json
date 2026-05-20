@@ -1,0 +1,27 @@
+{
+  "name": "LogEntry",
+  "type": "object",
+  "properties": {
+    "daily_log_id": {
+      "type": "string",
+      "description": "Reference to the daily log"
+    },
+    "time_stamp": {
+      "type": "string",
+      "description": "Time of entry in HH:MM format"
+    },
+    "content": {
+      "type": "string",
+      "description": "Log entry text"
+    },
+    "sort_order": {
+      "type": "number",
+      "description": "Order of entry for sorting"
+    }
+  },
+  "required": [
+    "daily_log_id",
+    "content",
+    "time_stamp"
+  ]
+}
