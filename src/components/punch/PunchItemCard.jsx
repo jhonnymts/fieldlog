@@ -17,7 +17,7 @@ export default function PunchItemCard({ item, onUpdate, onDelete }) {
   const handleStatusChange = (newStatus) => {
     const updateData = { status: newStatus };
     if (newStatus === 'Closed' && !item.date_closed) {
-      updateData.date_closed = new Date().toISOString().split('T')[0];
+      updateData.date_closed = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
     }
     if (newStatus !== 'Closed') {
       updateData.date_closed = '';

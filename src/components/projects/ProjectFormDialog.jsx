@@ -6,8 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 export default function ProjectFormDialog({ open, onClose, onSubmit, isLoading }) {
-  const [form, setForm] = useState({ project_name: '', client_name: '', location: '', project_number: '', activity_type: 'T&C', start_date: new Date().toISOString().split('T')[0] });
-  const reset = () => setForm({ project_name: '', client_name: '', location: '', project_number: '', activity_type: 'T&C', start_date: new Date().toISOString().split('T')[0] });
+  const [form, setForm] = useState({ project_name: '', client_name: '', location: '', project_number: '', activity_type: 'T&C', start_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() });
+  const reset = () => setForm({ project_name: '', client_name: '', location: '', project_number: '', activity_type: 'T&C', start_date: (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })() });
   const handleSubmit = (e) => { e.preventDefault(); onSubmit(form); reset(); };
   return (
     <Dialog open={open} onOpenChange={onClose}>

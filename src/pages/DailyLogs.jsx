@@ -24,7 +24,11 @@ async function deleteDailyLogWithChildren(logId) {
 export default function DailyLogs() {
   const { projectId } = useParams();
   const queryClient = useQueryClient();
-  const [newDate, setNewDate] = useState(new Date().toISOString().split('T')[0]);
+  const todayLocal = () => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  };
+  const [newDate, setNewDate] = useState(todayLocal());
   const [confirmId, setConfirmId] = useState(null);
 
   const { data: project } = useQuery({
