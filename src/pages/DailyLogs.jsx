@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { format } from 'date-fns';
 import EmptyState from '@/components/shared/EmptyState';
+import { toast } from 'sonner';
 
 export default function DailyLogs() {
   const { projectId } = useParams();
@@ -15,7 +16,11 @@ export default function DailyLogs() {
 
   const { data: project } = useQuery({ queryKey: ['project', projectId], queryFn: async () => { const projects = await fieldlog.entities.Project.filter({ id: projectId }); return projects[0]; } });
   const { data: logs = [], isLoading } = useQuery({ queryKey: ['dailyLogs', projectId], queryFn: () => fieldlog.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
-  const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.DailyLog.create(data), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dailyLogs', projectId] }) });
+  const createMutation = useMutation({
+    mutationFn: (data) => fieldlog.entities.DailyLog.create(data),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['dailyLogs', projectId] }),
+    onError: (err) => toast.error(err?.message || 'Failed to create log'),
+  });
 
   const handleCreateLog = () => { const exists = logs.find((l) => l.log_date === newDate); if (exists) return; createMutation.mutate({ project_id: projectId, log_date: newDate }); };
   if (isLoading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
