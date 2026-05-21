@@ -1,7 +1,7 @@
 /**
  * Supabase client
  * Uses @supabase/supabase-js for auth session management.
- * The same entity API shape is preserved: .filter(), .list(), .create(), .update(), .delete(), .bulkCreate()
+ * Entity API shape: .filter(), .list(), .create(), .update(), .delete(), .bulkCreate()
  * Auth token is automatically attached to every request via the SDK session.
  */
 
@@ -17,7 +17,6 @@ export const supabase = createClient(SB_URL, SB_KEY);
 async function sbFetch(table, options = {}) {
   const { path = '', method = 'GET', body, params } = options;
 
-  // Get current session token from SDK
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token ?? SB_KEY;
 
@@ -106,13 +105,12 @@ function createEntityClient(table) {
       });
     },
 
+    // BUG FIX: was looping one POST per row — now sends a single batch POST array
+    // Supabase PostgREST accepts an array body and inserts all rows in one request
     async bulkCreate(payloads) {
-      const results = [];
-      for (const payload of payloads) {
-        const record = await sbFetch(table, { method: 'POST', body: payload });
-        results.push(Array.isArray(record) ? record[0] : record);
-      }
-      return results;
+      if (!payloads || payloads.length === 0) return [];
+      const result = await sbFetch(table, { method: 'POST', body: payloads });
+      return Array.isArray(result) ? result : [result];
     },
   };
 }
@@ -120,12 +118,12 @@ function createEntityClient(table) {
 // ─── FieldLog client ──────────────────────────────────────────────────────────
 export const fieldlog = {
   entities: {
-    Project:   createEntityClient('projects'),
-    DailyLog:  createEntityClient('daily_logs'),
-    LogEntry:  createEntityClient('log_entries'),
-    IssueItem: createEntityClient('issue_items'),
-    Asset:     createEntityClient('assets'),
-    PunchItem: createEntityClient('punch_items'),
+    Project:     createEntityClient('projects'),
+    DailyLog:    createEntityClient('daily_logs'),
+    LogEntry:    createEntityClient('log_entries'),
+    IssueItem:   createEntityClient('issue_items'),
+    Asset:       createEntityClient('assets'),
+    PunchItem:   createEntityClient('punch_items'),
     UserProfile: createEntityClient('user_profiles'),
   },
 };
