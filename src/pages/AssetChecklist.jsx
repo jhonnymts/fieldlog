@@ -42,7 +42,8 @@ export default function AssetChecklist() {
     a.click();
     URL.revokeObjectURL(url);
   };
-    const file = e.target.files?.[0];
+
+  const handleCSVImport = (e) => {
     if (!file) return;
     const reader = new FileReader();
     reader.onload = (event) => {
