@@ -35,6 +35,11 @@ export default function DailyLogDetail() {
     queryKey: ['punchItems', projectId],
     queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }, 'item_number'),
   });
+  // Fetch project assets so PDF and AI drafts have full asset context
+  const { data: assets = [] } = useQuery({
+    queryKey: ['assets', projectId],
+    queryFn: () => fieldlog.entities.Asset.filter({ project_id: projectId }),
+  });
 
   const updateLogMutation = useMutation({
     mutationFn: (data) => fieldlog.entities.DailyLog.update(logId, data),
@@ -44,7 +49,15 @@ export default function DailyLogDetail() {
   const handleGenerateReport = () => {
     if (!project || !log) return;
     const { companyName, engineerName, logoDataUrl } = getSettings();
-    generateDailyReportPDF({ project, log, entries, issues, companyName: companyName || engineerName || '', logoDataUrl });
+    generateDailyReportPDF({
+      project,
+      log,
+      entries,
+      issues,
+      assets,
+      companyName: companyName || engineerName || '',
+      logoDataUrl,
+    });
   };
 
   if (!log || !project) return (
@@ -68,18 +81,14 @@ export default function DailyLogDetail() {
         </Button>
       </div>
       <EntryFeed logId={logId} projectId={projectId} entries={entries} punchItems={punchItems} />
-      <IssuesSection
-        logId={logId}
-        projectId={projectId}
-        issues={issues}
-        punchItems={punchItems}
-      />
+      <IssuesSection logId={logId} projectId={projectId} issues={issues} punchItems={punchItems} />
       <ReportFields
         log={log}
         project={project}
         entries={entries}
         issues={issues}
         punchItems={punchItems}
+        assets={assets}
         onUpdate={(data) => updateLogMutation.mutate(data)}
       />
     </div>

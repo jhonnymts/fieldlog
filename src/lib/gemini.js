@@ -5,17 +5,12 @@
  * Get a free key at: https://console.groq.com
  *
  * Groq uses the OpenAI-compatible chat completions API shape.
- * All function signatures are unchanged — no other files need to change.
  */
 
 const GROQ_KEY = import.meta.env.VITE_GROQ_KEY;
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
 const MODEL    = 'llama-3.1-8b-instant';
 
-/**
- * Core call — takes a prompt string, returns the text response.
- * Throws a readable error if the key is missing or the API fails.
- */
 async function groqPrompt(prompt) {
   if (!GROQ_KEY) {
     throw new Error('No Groq API key set. Add VITE_GROQ_KEY to your .env.local file.');
@@ -44,13 +39,22 @@ async function groqPrompt(prompt) {
   return data.choices?.[0]?.message?.content?.trim() || '';
 }
 
+// ─── Build asset context block for prompts ────────────────────────────────────
+function buildAssetContext(assets = []) {
+  if (!assets.length) return '  None on record.';
+  return assets
+    .map(a => `  [${a.asset_id}] ${a.asset_name} (${a.asset_type || 'Other'}) — Status: ${a.status || 'In Progress'}${a.notes ? ` | Notes: ${a.notes}` : ''}`)
+    .join('\n');
+}
+
 // ─── Feature 1: Draft executive summary from activity entries ─────────────────
 
-export async function draftExecutiveSummary({ projectName, logDate, entries, issues }) {
+export async function draftExecutiveSummary({ projectName, logDate, entries, issues, assets = [] }) {
   const entryLines = entries.map(e => `  [${e.time_stamp}] ${e.content}`).join('\n');
   const issueLines = issues.length
     ? issues.map(i => `  #${i.issue_number} (${i.status}) — ${i.description}`).join('\n')
     : '  None logged.';
+  const assetLines = buildAssetContext(assets);
 
   const prompt = `You are a field commissioning engineer writing a formal daily report for a T&C / SAT project.
 
@@ -63,21 +67,26 @@ ${entryLines}
 Issues / action items logged today:
 ${issueLines}
 
+Asset / equipment status as of today:
+${assetLines}
+
 Write a concise, professional Executive Summary paragraph (3–5 sentences) suitable for a daily field report.
 - Write in past tense, third person ("Testing was conducted...", "The team completed...")
-- Summarize the key work accomplished, any notable findings, and overall day status
+- Summarize the key work accomplished, reference specific assets or equipment by name where relevant to today's entries
+- Note overall asset completion progress if meaningful (e.g. "X of Y assets are now complete")
 - Do NOT use bullet points — flowing prose only
-- Do NOT fabricate details not present in the entries above
-- Keep it under 120 words`;
+- Do NOT fabricate details not present in the entries or asset list above
+- Keep it under 130 words`;
 
   return groqPrompt(prompt);
 }
 
-// ─── Feature 2: Draft lookahead from open issues + punch items ────────────────
+// ─── Feature 2: Draft lookahead from open issues + punch items + assets ────────
 
-export async function draftLookahead({ projectName, issues, punchItems }) {
+export async function draftLookahead({ projectName, issues, punchItems, assets = [] }) {
   const openIssues = issues.filter(i => i.status !== 'Closed');
   const openPunch  = punchItems.filter(p => p.status !== 'Closed');
+  const inProgress = assets.filter(a => a.status === 'In Progress' || a.status === 'Open Issue' || a.status === 'Failed');
 
   const issueLine = openIssues.length
     ? openIssues.map(i => `  #${i.issue_number} — ${i.description}${i.owner ? ` (Owner: ${i.owner})` : ''}${i.target_date ? ` [Target: ${i.target_date}]` : ''}`).join('\n')
@@ -86,6 +95,10 @@ export async function draftLookahead({ projectName, issues, punchItems }) {
   const punchLine = openPunch.length
     ? openPunch.map(p => `  #${p.item_number} — ${p.description}${p.owner ? ` (Owner: ${p.owner})` : ''}`).join('\n')
     : '  None.';
+
+  const assetLine = inProgress.length
+    ? inProgress.map(a => `  [${a.asset_id}] ${a.asset_name} — ${a.status}`).join('\n')
+    : '  None — all assets complete or deferred.';
 
   const prompt = `You are a field commissioning engineer writing the Lookahead section of a daily T&C report.
 
@@ -97,12 +110,16 @@ ${issueLine}
 Outstanding punch list items:
 ${punchLine}
 
+Assets still requiring work (In Progress / Open Issue / Failed):
+${assetLine}
+
 Write a concise Lookahead paragraph (2–4 sentences) describing planned activities and follow-up actions for the next working day.
 - Write in future tense ("Tomorrow, the team will...", "Follow-up is required on...")
-- Prioritize items by urgency — open issues with target dates first
+- Prioritize open issues with target dates first, then assets still requiring attention
+- Reference specific asset IDs or names where relevant
 - Do NOT use bullet points — flowing prose only
 - Do NOT fabricate details not present above
-- Keep it under 80 words`;
+- Keep it under 90 words`;
 
   return groqPrompt(prompt);
 }

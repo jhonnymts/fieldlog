@@ -5,7 +5,7 @@ import { Save, Sparkles, Loader2 } from 'lucide-react';
 import { draftExecutiveSummary, draftLookahead } from '@/lib/gemini';
 import { format } from 'date-fns';
 
-export default function ReportFields({ log, project, entries, issues, punchItems, onUpdate }) {
+export default function ReportFields({ log, project, entries, issues, punchItems, assets = [], onUpdate }) {
   const [summary, setSummary] = useState(log?.executive_summary || '');
   const [lookahead, setLookahead] = useState(log?.lookahead || '');
   const [dirty, setDirty] = useState(false);
@@ -34,6 +34,7 @@ export default function ReportFields({ log, project, entries, issues, punchItems
         logDate,
         entries,
         issues,
+        assets,
       });
       setSummary(text);
       setDirty(true);
@@ -52,6 +53,7 @@ export default function ReportFields({ log, project, entries, issues, punchItems
         projectName: project?.project_name || '',
         issues,
         punchItems,
+        assets,
       });
       setLookahead(text);
       setDirty(true);
