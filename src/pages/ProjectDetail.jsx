@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, FileText, ClipboardCheck, AlertTriangle, MapPin, Calendar, Hash, Plus, Clock, Users } from 'lucide-react';
 import { format } from 'date-fns';
-import { useProjectRole } from '@/lib/useProjectRole';
+import { useAuth } from '@/lib/AuthContext';
 import TeamPanel from '@/components/sharing/TeamPanel';
 
 // ─── Tiny SVG ring chart ───────────────────────────────────────────────────────
@@ -32,11 +32,11 @@ function ProgressBar({ pct, color }) {
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
-  const { isOwner, role, loading: roleLoading } = useProjectRole(projectId);
+  const { user }      = useAuth();
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: async () => { const p = await fieldlog.entities.Project.filter({ id: projectId }); return p[0]; },
+    queryFn:  async () => { const p = await fieldlog.entities.Project.filter({ id: projectId }); return p[0]; },
   });
 
   const { data: logs   = [] } = useQuery({ queryKey: ['dailyLogs',  projectId], queryFn: () => fieldlog.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
@@ -45,10 +45,10 @@ export default function ProjectDetail() {
 
   const { data: recentEntries = [] } = useQuery({
     queryKey: ['recentEntries', projectId],
-    queryFn: async () => {
+    queryFn:  async () => {
       if (!logs.length) return [];
       const latest = logs.slice(0, 3);
-      const all = await Promise.all(latest.map(l => fieldlog.entities.LogEntry.filter({ daily_log_id: l.id }, '-sort_order')));
+      const all    = await Promise.all(latest.map(l => fieldlog.entities.LogEntry.filter({ daily_log_id: l.id }, '-sort_order')));
       return all.flat().slice(0, 5).map(e => {
         const log = latest.find(l => l.id === e.daily_log_id);
         return { ...e, log_date: log?.log_date };
@@ -57,12 +57,16 @@ export default function ProjectDetail() {
     enabled: logs.length > 0,
   });
 
-  if (projectLoading || roleLoading) return (
+  if (projectLoading) return (
     <div className="flex items-center justify-center py-20">
       <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
     </div>
   );
   if (!project) return <div className="max-w-4xl mx-auto px-4 py-6"><p className="text-muted-foreground">Project not found.</p></div>;
+
+  // Determine ownership directly from the project object — no separate query needed
+  // This is always reliable since the project was fetched with the user's own RLS token
+  const isOwner = !!user && !!project && project.user_id === user.id;
 
   // ─── Derived metrics ──────────────────────────────────────────────────────
   const totalAssets    = assets.length;
@@ -87,12 +91,6 @@ export default function ProjectDetail() {
     Commissioning:'bg-purple-500/20 text-purple-400',
   };
 
-  const roleBadge = {
-    owner:  { label: 'Owner',  color: 'bg-amber-400/10 text-amber-400' },
-    editor: { label: 'Editor', color: 'bg-blue-400/10 text-blue-400' },
-    viewer: { label: 'Viewer', color: 'bg-slate-400/10 text-slate-400' },
-  };
-
   const sections = [
     { label: 'Daily Logs',      icon: FileText,       path: `/project/${projectId}/logs`,   description: 'Timestamped activity entries', count: `${logs.length} log${logs.length !== 1 ? 's' : ''}` },
     { label: 'Asset Checklist', icon: ClipboardCheck, path: `/project/${projectId}/assets`, description: 'Equipment testing status',      count: `${completeAssets}/${totalAssets} complete` },
@@ -102,7 +100,6 @@ export default function ProjectDetail() {
   return (
     <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
 
-      {/* Back nav */}
       <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
         <ArrowLeft className="h-4 w-4" /> All Projects
       </Link>
@@ -111,16 +108,9 @@ export default function ProjectDetail() {
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-start justify-between mb-2">
           <h2 className="text-xl font-bold text-foreground">{project.project_name}</h2>
-          <div className="flex items-center gap-2">
-            {role && (
-              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${roleBadge[role]?.color}`}>
-                {roleBadge[role]?.label}
-              </span>
-            )}
-            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${activityColors[project.activity_type] || 'bg-muted text-muted-foreground'}`}>
-              {project.activity_type}
-            </span>
-          </div>
+          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${activityColors[project.activity_type] || 'bg-muted text-muted-foreground'}`}>
+            {project.activity_type}
+          </span>
         </div>
         {project.client_name && <p className="text-sm text-muted-foreground mb-3">{project.client_name}</p>}
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
@@ -234,7 +224,7 @@ export default function ProjectDetail() {
         ))}
       </div>
 
-      {/* Team section — owners only */}
+      {/* Team section — always shown to project owner */}
       {isOwner && (
         <div className="bg-card border border-border rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
