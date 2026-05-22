@@ -2,12 +2,14 @@ import React from 'react';
 import { fieldlog } from '@/api/supabaseClient';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, FileText, ClipboardCheck, AlertTriangle, MapPin, Calendar, Hash, Plus, Clock } from 'lucide-react';
+import { ArrowLeft, FileText, ClipboardCheck, AlertTriangle, MapPin, Calendar, Hash, Plus, Clock, Users } from 'lucide-react';
 import { format } from 'date-fns';
+import { useProjectRole } from '@/lib/useProjectRole';
+import TeamPanel from '@/components/sharing/TeamPanel';
 
 // ─── Tiny SVG ring chart ───────────────────────────────────────────────────────
 function RingChart({ pct, color, size = 80, stroke = 8 }) {
-  const r   = (size - stroke) / 2;
+  const r    = (size - stroke) / 2;
   const circ = 2 * Math.PI * r;
   const dash = (pct / 100) * circ;
   return (
@@ -19,7 +21,6 @@ function RingChart({ pct, color, size = 80, stroke = 8 }) {
   );
 }
 
-// ─── Progress bar ──────────────────────────────────────────────────────────────
 function ProgressBar({ pct, color }) {
   const clamp = Math.min(100, Math.max(0, pct));
   return (
@@ -31,17 +32,17 @@ function ProgressBar({ pct, color }) {
 
 export default function ProjectDetail() {
   const { projectId } = useParams();
+  const { isOwner, role, loading: roleLoading } = useProjectRole(projectId);
 
   const { data: project, isLoading: projectLoading } = useQuery({
     queryKey: ['project', projectId],
-    queryFn: async () => { const p = await fieldlog.entities.Project.filter({ id: projectId }); return p[0]; }
+    queryFn: async () => { const p = await fieldlog.entities.Project.filter({ id: projectId }); return p[0]; },
   });
 
-  const { data: logs    = [] } = useQuery({ queryKey: ['dailyLogs',  projectId], queryFn: () => fieldlog.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
-  const { data: assets  = [] } = useQuery({ queryKey: ['assets',     projectId], queryFn: () => fieldlog.entities.Asset.filter({ project_id: projectId }) });
-  const { data: punch   = [] } = useQuery({ queryKey: ['punchItems', projectId], queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }) });
+  const { data: logs   = [] } = useQuery({ queryKey: ['dailyLogs',  projectId], queryFn: () => fieldlog.entities.DailyLog.filter({ project_id: projectId }, '-log_date') });
+  const { data: assets = [] } = useQuery({ queryKey: ['assets',     projectId], queryFn: () => fieldlog.entities.Asset.filter({ project_id: projectId }) });
+  const { data: punch  = [] } = useQuery({ queryKey: ['punchItems', projectId], queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }) });
 
-  // Most recent entries across all logs for the activity feed
   const { data: recentEntries = [] } = useQuery({
     queryKey: ['recentEntries', projectId],
     queryFn: async () => {
@@ -56,14 +57,14 @@ export default function ProjectDetail() {
     enabled: logs.length > 0,
   });
 
-  if (projectLoading) return (
+  if (projectLoading || roleLoading) return (
     <div className="flex items-center justify-center py-20">
       <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" />
     </div>
   );
   if (!project) return <div className="max-w-4xl mx-auto px-4 py-6"><p className="text-muted-foreground">Project not found.</p></div>;
 
-  // ─── Derived metrics ─────────────────────────────────────────────────────────
+  // ─── Derived metrics ──────────────────────────────────────────────────────
   const totalAssets    = assets.length;
   const completeAssets = assets.filter(a => a.status === 'Complete').length;
   const assetPct       = totalAssets > 0 ? Math.round((completeAssets / totalAssets) * 100) : 0;
@@ -74,16 +75,22 @@ export default function ProjectDetail() {
   const inProgPunch = punch.filter(p => p.status === 'In Progress').length;
   const punchPct    = totalPunch > 0 ? Math.round((closedPunch / totalPunch) * 100) : 0;
 
-  const daysOnSite      = logs.length;
-  const contractedDays  = project.contracted_days || null;
-  const daysPct         = contractedDays ? Math.round((daysOnSite / contractedDays) * 100) : null;
-  const daysColor       = !daysPct ? '#6b7280' : daysPct >= 100 ? '#ef4444' : daysPct >= 80 ? '#f59e0b' : '#1D9E75';
+  const daysOnSite     = logs.length;
+  const contractedDays = project.contracted_days || null;
+  const daysPct        = contractedDays ? Math.round((daysOnSite / contractedDays) * 100) : null;
+  const daysColor      = !daysPct ? '#6b7280' : daysPct >= 100 ? '#ef4444' : daysPct >= 80 ? '#f59e0b' : '#1D9E75';
 
   const activityColors = {
-    FAT: 'bg-blue-500/20 text-blue-400',
-    SAT: 'bg-emerald-500/20 text-emerald-400',
-    'T&C': 'bg-amber-500/20 text-amber-400',
-    Commissioning: 'bg-purple-500/20 text-purple-400'
+    FAT:          'bg-blue-500/20 text-blue-400',
+    SAT:          'bg-emerald-500/20 text-emerald-400',
+    'T&C':        'bg-amber-500/20 text-amber-400',
+    Commissioning:'bg-purple-500/20 text-purple-400',
+  };
+
+  const roleBadge = {
+    owner:  { label: 'Owner',  color: 'bg-amber-400/10 text-amber-400' },
+    editor: { label: 'Editor', color: 'bg-blue-400/10 text-blue-400' },
+    viewer: { label: 'Viewer', color: 'bg-slate-400/10 text-slate-400' },
   };
 
   const sections = [
@@ -104,20 +111,27 @@ export default function ProjectDetail() {
       <div className="bg-card border border-border rounded-xl p-5">
         <div className="flex items-start justify-between mb-2">
           <h2 className="text-xl font-bold text-foreground">{project.project_name}</h2>
-          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${activityColors[project.activity_type] || 'bg-muted text-muted-foreground'}`}>{project.activity_type}</span>
+          <div className="flex items-center gap-2">
+            {role && (
+              <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${roleBadge[role]?.color}`}>
+                {roleBadge[role]?.label}
+              </span>
+            )}
+            <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${activityColors[project.activity_type] || 'bg-muted text-muted-foreground'}`}>
+              {project.activity_type}
+            </span>
+          </div>
         </div>
         {project.client_name && <p className="text-sm text-muted-foreground mb-3">{project.client_name}</p>}
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
-          {project.location      && <span className="flex items-center gap-1.5"><MapPin    className="h-3.5 w-3.5" /> {project.location}</span>}
-          {project.project_number && <span className="flex items-center gap-1.5"><Hash      className="h-3.5 w-3.5" /> {project.project_number}</span>}
-          {project.start_date    && <span className="flex items-center gap-1.5"><Calendar  className="h-3.5 w-3.5" /> {format(new Date(project.start_date + 'T12:00:00'), 'MMM d, yyyy')}</span>}
+          {project.location       && <span className="flex items-center gap-1.5"><MapPin   className="h-3.5 w-3.5" /> {project.location}</span>}
+          {project.project_number && <span className="flex items-center gap-1.5"><Hash     className="h-3.5 w-3.5" /> {project.project_number}</span>}
+          {project.start_date     && <span className="flex items-center gap-1.5"><Calendar className="h-3.5 w-3.5" /> {format(new Date(project.start_date + 'T12:00:00'), 'MMM d, yyyy')}</span>}
         </div>
       </div>
 
-      {/* ── Dashboard cards ── */}
+      {/* Dashboard cards */}
       <div className="grid grid-cols-3 gap-3">
-
-        {/* Asset completion ring */}
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col items-center gap-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Assets</p>
           <div className="relative flex items-center justify-center">
@@ -127,7 +141,6 @@ export default function ProjectDetail() {
           <p className="text-xs text-muted-foreground text-center">{completeAssets} of {totalAssets} complete</p>
         </div>
 
-        {/* Punch list progress */}
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Punch List</p>
           <div className="flex-1 space-y-2">
@@ -143,15 +156,12 @@ export default function ProjectDetail() {
           </div>
         </div>
 
-        {/* Days tracker */}
         <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">Days</p>
           <div className="flex-1 space-y-2">
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">On-site</span>
-              <span className="font-semibold text-foreground">
-                {daysOnSite}{contractedDays ? `/${contractedDays}` : ''}
-              </span>
+              <span className="font-semibold text-foreground">{daysOnSite}{contractedDays ? `/${contractedDays}` : ''}</span>
             </div>
             {contractedDays
               ? <ProgressBar pct={daysPct} color={daysColor} />
@@ -166,7 +176,7 @@ export default function ProjectDetail() {
         </div>
       </div>
 
-      {/* ── Activity feed ── */}
+      {/* Activity feed */}
       {recentEntries.length > 0 && (
         <div className="bg-card border border-border rounded-xl p-4">
           <h3 className="text-xs text-muted-foreground uppercase tracking-wider font-medium mb-3">Recent Activity</h3>
@@ -188,7 +198,7 @@ export default function ProjectDetail() {
         </div>
       )}
 
-      {/* ── Quick actions ── */}
+      {/* Quick actions */}
       <div className="grid grid-cols-3 gap-2">
         <Link to={`/project/${projectId}/logs`}
           className="flex flex-col items-center gap-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-xl p-3 transition-colors">
@@ -207,7 +217,7 @@ export default function ProjectDetail() {
         </Link>
       </div>
 
-      {/* ── Section nav ── */}
+      {/* Section nav */}
       <div className="space-y-3">
         {sections.map((section) => (
           <Link key={section.path} to={section.path}
@@ -223,6 +233,22 @@ export default function ProjectDetail() {
           </Link>
         ))}
       </div>
+
+      {/* Team section — owners only */}
+      {isOwner && (
+        <div className="bg-card border border-border rounded-xl p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-foreground text-sm">Team</h3>
+              <p className="text-xs text-muted-foreground">Invite colleagues to this project</p>
+            </div>
+          </div>
+          <TeamPanel projectId={projectId} />
+        </div>
+      )}
 
     </div>
   );

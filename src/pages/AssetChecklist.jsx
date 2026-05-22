@@ -6,6 +6,7 @@ import { ArrowLeft, Plus, Upload, ClipboardCheck, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
 import EmptyState from '@/components/shared/EmptyState';
+import { useProjectRole } from '@/lib/useProjectRole';
 import AssetSummaryBar from '@/components/assets/AssetSummaryBar';
 import AssetCard from '@/components/assets/AssetCard';
 import AssetFormDialog from '@/components/assets/AssetFormDialog';
@@ -18,6 +19,7 @@ export default function AssetChecklist() {
   const [showForm, setShowForm] = useState(false);
   const [filter, setFilter] = useState('all');
   const fileInputRef = useRef(null);
+  const { canEdit } = useProjectRole(projectId);
 
   const { data: project } = useQuery({
     queryKey: ['project', projectId],
