@@ -13,8 +13,8 @@ import DailyLogDetail from '@/pages/DailyLogDetail';
 import AssetChecklist from '@/pages/AssetChecklist';
 import PunchList from '@/pages/PunchList';
 import Settings from '@/pages/Settings';
+import InviteAccept from '@/pages/InviteAccept';
 
-// Protects all app routes — redirects to /login if not authenticated
 function ProtectedRoute({ children }) {
   const { session, loading } = useAuth();
   if (loading) return (
@@ -37,7 +37,9 @@ function AppRoutes() {
   return (
     <Routes>
       {/* Public */}
-      <Route path="/login" element={session ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/login"  element={session ? <Navigate to="/" replace /> : <Login />} />
+      {/* Invite accept — needs auth but not AppLayout */}
+      <Route path="/invite" element={<InviteAccept />} />
 
       {/* Protected */}
       <Route element={<ProtectedRoute><AppLayout /></ProtectedRoute>}>
