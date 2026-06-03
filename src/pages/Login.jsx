@@ -1,30 +1,26 @@
-/**
- * Login / Signup page
- * Single screen with toggle between sign-in and sign-up modes.
- */
-
 import React, { useState } from 'react';
 import { useAuth } from '@/lib/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, Loader2, UserPlus, LogIn } from 'lucide-react';
 
 export default function Login() {
-  const { signIn, signUp } = useAuth();
-  const navigate = useNavigate();
+  const { signIn, signUp }    = useAuth();
+  const navigate              = useNavigate();
+  const [searchParams]        = useSearchParams();
+  const redirectTo            = searchParams.get('redirect') || '/';
 
-  const [mode, setMode]       = useState('signin'); // 'signin' | 'signup'
-  const [email, setEmail]     = useState('');
+  const [mode,     setMode]     = useState('signin');
+  const [email,    setEmail]    = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [error, setError]     = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [success,  setSuccess]  = useState('');
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setSuccess('');
     setLoading(true);
-
     try {
       if (mode === 'signup') {
         const { error } = await signUp(email, password);
@@ -34,7 +30,7 @@ export default function Login() {
       } else {
         const { error } = await signIn(email, password);
         if (error) throw error;
-        navigate('/');
+        navigate(redirectTo, { replace: true });
       }
     } catch (err) {
       setError(err.message || 'Something went wrong. Please try again.');
@@ -46,8 +42,6 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
-
-        {/* Logo */}
         <div className="flex flex-col items-center mb-8">
           <div className="h-14 w-14 rounded-2xl bg-primary flex items-center justify-center mb-4">
             <span className="text-primary-foreground font-bold text-xl font-mono">FL</span>
@@ -58,67 +52,48 @@ export default function Login() {
           </p>
         </div>
 
-        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-3">
-
-          {/* Email */}
           <div className="relative">
             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="Email address"
-              required
-              autoFocus
+              type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email address" required autoFocus
               className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
           </div>
-
-          {/* Password */}
           <div className="relative">
             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
               placeholder={mode === 'signup' ? 'Password (min 6 chars)' : 'Password'}
-              required
-              minLength={mode === 'signup' ? 6 : undefined}
+              required minLength={mode === 'signup' ? 6 : undefined}
               className="w-full h-12 pl-10 pr-4 rounded-xl border border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary transition-all"
             />
           </div>
 
-          {/* Error */}
           {error && (
             <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
               <p className="text-xs text-destructive">{error}</p>
             </div>
           )}
-
-          {/* Success */}
           {success && (
             <div className="rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2">
               <p className="text-xs text-emerald-400">{success}</p>
             </div>
           )}
 
-          {/* Submit */}
           <button
-            type="submit"
-            disabled={loading}
+            type="submit" disabled={loading}
             className="w-full h-12 rounded-xl bg-primary text-primary-foreground font-semibold hover:bg-primary/90 transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {loading
               ? <Loader2 className="h-4 w-4 animate-spin" />
               : mode === 'signin'
                 ? <><LogIn className="h-4 w-4" /> Sign In</>
-                : <><UserPlus className="h-4 w-4" /> Create Account</>
-            }
+                : <><UserPlus className="h-4 w-4" /> Create Account</>}
           </button>
         </form>
 
-        {/* Toggle */}
         <p className="text-sm text-muted-foreground text-center mt-5">
           {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
           <button
@@ -128,7 +103,6 @@ export default function Login() {
             {mode === 'signin' ? 'Sign up' : 'Sign in'}
           </button>
         </p>
-
       </div>
     </div>
   );
