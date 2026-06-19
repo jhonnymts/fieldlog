@@ -7,14 +7,17 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cleanupEntry } from '@/lib/gemini';
 import { useProjectRole } from '@/lib/useProjectRole';
+import TagInput from '@/components/shared/TagInput';
 
 export default function EntryFeed({ logId, projectId, entries, punchItems = [] }) {
   const queryClient         = useQueryClient();
   const { canEdit }         = useProjectRole(projectId);
   const [newEntry,          setNewEntry]          = useState('');
+  const [newTags,           setNewTags]           = useState([]);
   const [editingId,         setEditingId]         = useState(null);
   const [editText,          setEditText]          = useState('');
   const [editTime,          setEditTime]          = useState('');
+  const [editTags,          setEditTags]          = useState([]);
   const [cleaningUp,        setCleaningUp]        = useState(false);
   const [cleaningEditId,    setCleaningEditId]    = useState(null);
   const [promotingId,       setPromotingId]       = useState(null);
@@ -23,7 +26,11 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
 
   const createMutation = useMutation({
     mutationFn: (data) => fieldlog.entities.LogEntry.create(data),
-    onSuccess:  () => { queryClient.invalidateQueries({ queryKey: ['logEntries', logId] }); setNewEntry(''); },
+    onSuccess:  () => {
+      queryClient.invalidateQueries({ queryKey: ['logEntries', logId] });
+      setNewEntry('');
+      setNewTags([]);
+    },
   });
 
   const deleteMutation = useMutation({
@@ -80,12 +87,17 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     } else {
       timeStamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
     }
-    createMutation.mutate({ daily_log_id: logId, content, time_stamp: timeStamp, sort_order: entries.length + 1 });
+    createMutation.mutate({ daily_log_id: logId, content, time_stamp: timeStamp, sort_order: entries.length + 1, tags: newTags });
   };
 
   const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleAdd(); } };
 
-  const startEdit = (entry) => { setEditingId(entry.id); setEditText(entry.content); setEditTime(entry.time_stamp); };
+  const startEdit = (entry) => {
+    setEditingId(entry.id);
+    setEditText(entry.content);
+    setEditTime(entry.time_stamp);
+    setEditTags(entry.tags || []);
+  };
 
   const handleSave = async (id) => {
     const normalized = editTime.trim().replace(/^(\d):/, '0$1:');
@@ -94,7 +106,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     try {
       const updated   = entries.map((e) => e.id === id ? { ...e, time_stamp: newTime, content: editText } : e);
       const reordered = [...updated].sort((a, b) => timeToInt(a.time_stamp) - timeToInt(b.time_stamp));
-      await fieldlog.entities.LogEntry.update(id, { content: editText, time_stamp: newTime });
+      await fieldlog.entities.LogEntry.update(id, { content: editText, time_stamp: newTime, tags: editTags });
       const sortUpdates = reordered
         .map((e, idx) => ({ id: e.id, sort_order: idx + 1 }))
         .filter(({ id: eid, sort_order }) => { const orig = entries.find((e) => e.id === eid); return orig && orig.sort_order !== sort_order; });
@@ -120,7 +132,6 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
     <div className="mb-8">
       <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider mb-3">Activity Feed</h3>
 
-      {/* Compose box — editors/owners only */}
       {canEdit && (
         <div className="bg-card border border-border rounded-xl p-3 mb-4 space-y-2">
           <Textarea
@@ -131,6 +142,7 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
             className="bg-secondary border-border min-h-[48px] max-h-32 resize-none"
             rows={1}
           />
+          <TagInput tags={newTags} onChange={setNewTags} placeholder="Add tags…" />
           <div className="flex items-center justify-between gap-2">
             <Button size="sm" variant="ghost" onClick={handleCleanupNew} disabled={!newEntry.trim() || cleaningUp}
               className="h-8 text-xs text-primary hover:bg-primary/5 px-2" title="Polish this entry with AI">
@@ -143,7 +155,6 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
         </div>
       )}
 
-      {/* Entry list */}
       <div className="space-y-2">
         {sortedEntries.map((entry) => (
           <div key={entry.id} className="bg-card border border-border rounded-lg p-3">
@@ -157,6 +168,10 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
                 </div>
                 <Textarea value={editText} onChange={(e) => setEditText(e.target.value)}
                   className="bg-secondary border-border resize-none min-h-[60px]" autoFocus />
+                <div>
+                  <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Tags</label>
+                  <TagInput tags={editTags} onChange={setEditTags} />
+                </div>
                 <div className="flex items-center justify-between gap-2">
                   <Button size="sm" variant="ghost" onClick={() => handleCleanupEdit(entry.id)} disabled={!editText.trim() || cleaningEditId === entry.id}
                     className="h-8 text-xs text-primary hover:bg-primary/5 px-2">
@@ -180,9 +195,13 @@ export default function EntryFeed({ logId, projectId, entries, punchItems = [] }
                     <span className="text-xs font-mono text-primary font-medium">{entry.time_stamp}</span>
                   </div>
                   <p className="text-sm text-foreground whitespace-pre-wrap">{entry.content}</p>
+                  {entry.tags && entry.tags.length > 0 && (
+                    <div className="mt-1.5">
+                      <TagInput tags={entry.tags} onChange={() => {}} readOnly size="xs" />
+                    </div>
+                  )}
                 </div>
                 <div className="flex gap-1 flex-shrink-0">
-                  {/* Promote to punch list — editors/owners only */}
                   {canEdit && (
                     isAlreadyPromoted(entry) ? (
                       <span title="On Punch List" className="p-1.5 text-amber-400"><Check className="h-3.5 w-3.5" /></span>

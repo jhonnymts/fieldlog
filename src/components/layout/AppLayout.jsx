@@ -1,13 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-import { FolderOpen, Settings, LogOut } from 'lucide-react';
+import { FolderOpen, Settings, LogOut, Search } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { toast } from 'sonner';
+import GlobalSearch from '@/components/shared/GlobalSearch';
 
 export default function AppLayout() {
   const location  = useLocation();
   const navigate  = useNavigate();
   const { user, signOut } = useAuth();
+  const [searchOpen, setSearchOpen] = useState(false);
 
   const navItems = [
     { path: '/',         icon: FolderOpen, label: 'Projects' },
@@ -31,8 +33,14 @@ export default function AppLayout() {
             <h1 className="text-lg font-bold tracking-tight text-foreground">FieldLog</h1>
           </div>
 
-          {/* User info + sign out */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSearchOpen(true)}
+              title="Search"
+              className="p-1.5 text-muted-foreground hover:text-foreground transition-colors rounded-lg hover:bg-secondary"
+            >
+              <Search className="h-4 w-4" />
+            </button>
             {user?.email && (
               <span className="text-xs text-muted-foreground hidden sm:block truncate max-w-[160px]">
                 {user.email}
@@ -70,6 +78,8 @@ export default function AppLayout() {
           })}
         </div>
       </nav>
+
+      {searchOpen && <GlobalSearch onClose={() => setSearchOpen(false)} />}
     </div>
   );
 }

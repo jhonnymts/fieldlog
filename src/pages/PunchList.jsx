@@ -19,13 +19,14 @@ export default function PunchList() {
   const { projectId }   = useParams();
   const queryClient     = useQueryClient();
   const { canEdit }     = useProjectRole(projectId);
-  const [showForm,          setShowForm]          = useState(false);
-  const [filter,            setFilter]            = useState('all');
-  const [narrative,         setNarrative]         = useState('');
-  const [loadingNarrative,  setLoadingNarrative]  = useState(false);
-  const [narrativeError,    setNarrativeError]    = useState('');
+  const [showForm,         setShowForm]         = useState(false);
+  const [filter,           setFilter]           = useState('all');
+  const [tagFilter,        setTagFilter]        = useState(null);
+  const [narrative,        setNarrative]        = useState('');
+  const [loadingNarrative, setLoadingNarrative] = useState(false);
+  const [narrativeError,   setNarrativeError]   = useState('');
 
-  const { data: project }       = useQuery({ queryKey: ['project', projectId],   queryFn: async () => { const r = await fieldlog.entities.Project.filter({ id: projectId }); return r[0]; } });
+  const { data: project }             = useQuery({ queryKey: ['project', projectId],   queryFn: async () => { const r = await fieldlog.entities.Project.filter({ id: projectId }); return r[0]; } });
   const { data: items = [], isLoading } = useQuery({ queryKey: ['punchItems', projectId], queryFn: () => fieldlog.entities.PunchItem.filter({ project_id: projectId }, 'item_number') });
 
   const createMutation = useMutation({ mutationFn: (data) => fieldlog.entities.PunchItem.create(data),             onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['punchItems', projectId] }); setShowForm(false); } });
@@ -50,6 +51,10 @@ export default function PunchList() {
     'In Progress': items.filter(i => i.status === 'In Progress').length,
     Closed:        items.filter(i => i.status === 'Closed').length,
   };
+
+  const allTags       = [...new Set(items.flatMap((i) => i.tags || []))].sort();
+  const statusFiltered = items.filter(i => filter === 'all' || i.status === filter);
+  const filteredItems  = tagFilter ? statusFiltered.filter((i) => (i.tags || []).includes(tagFilter)) : statusFiltered;
 
   if (isLoading) return <div className="flex items-center justify-center py-20"><div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full animate-spin" /></div>;
 
@@ -95,33 +100,53 @@ export default function PunchList() {
       )}
 
       {items.length > 0 && (
-        <div className="flex gap-2 mb-4 overflow-x-auto pb-1">
-          {punchFilters.map(f => (
-            <button key={f} onClick={() => setFilter(f)}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium whitespace-nowrap transition-all ${filter === f ? 'bg-secondary border-primary/40 ' + filterStyles[f] : 'bg-transparent border-border text-muted-foreground hover:border-primary/30'}`}>
-              {f === 'all' ? `All (${items.length})` : `${f} (${statusCounts[f] ?? 0})`}
-            </button>
-          ))}
+        <div className="space-y-2 mb-4">
+          <div className="flex gap-2 overflow-x-auto pb-1">
+            {punchFilters.map(f => (
+              <button key={f} onClick={() => setFilter(f)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium whitespace-nowrap transition-all ${filter === f ? 'bg-secondary border-primary/40 ' + filterStyles[f] : 'bg-transparent border-border text-muted-foreground hover:border-primary/30'}`}>
+                {f === 'all' ? `All (${items.length})` : `${f} (${statusCounts[f] ?? 0})`}
+              </button>
+            ))}
+          </div>
+
+          {allTags.length > 0 && (
+            <div className="flex gap-1.5 overflow-x-auto pb-1">
+              {tagFilter && (
+                <button onClick={() => setTagFilter(null)}
+                  className="flex-shrink-0 text-xs font-medium px-3 py-1 rounded-full border bg-primary/10 text-primary border-primary/30 transition-colors">
+                  × clear tag
+                </button>
+              )}
+              {allTags.map((tag) => (
+                <button key={tag} onClick={() => setTagFilter(tagFilter === tag ? null : tag)}
+                  className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full border transition-colors ${tagFilter === tag ? 'bg-primary/20 text-primary border-primary/40' : 'bg-secondary text-muted-foreground border-border hover:text-foreground'}`}>
+                  #{tag}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
       {items.length === 0
         ? <EmptyState icon={AlertTriangle} title="No punch items" description="Add items to track outstanding issues."
             action={canEdit ? <Button onClick={() => setShowForm(true)} className="bg-primary text-primary-foreground"><Plus className="h-4 w-4 mr-2" /> Add Item</Button> : null} />
-        : <div className="space-y-2">
-            {items.filter(i => filter === 'all' || i.status === filter).map(item => (
-              <PunchItemCard key={item.id} item={item}
-                onUpdate={canEdit ? (data) => updateMutation.mutate({ id: item.id, data }) : null}
-                onDelete={canEdit ? () => deleteMutation.mutate(item.id) : null}
-                readOnly={!canEdit}
-              />
-            ))}
-          </div>
+        : filteredItems.length === 0
+          ? <p className="text-sm text-muted-foreground text-center py-8">No items match the current filters.</p>
+          : <div className="space-y-2">
+              {filteredItems.map(item => (
+                <PunchItemCard key={item.id} item={item}
+                  onUpdate={canEdit ? (data) => updateMutation.mutate({ id: item.id, data }) : null}
+                  onDelete={canEdit ? () => deleteMutation.mutate(item.id) : null}
+                  readOnly={!canEdit} />
+              ))}
+            </div>
       }
 
       {canEdit && (
         <PunchFormDialog open={showForm} onClose={() => setShowForm(false)}
-          onSubmit={(data) => createMutation.mutate({ ...data, project_id: projectId, item_number: items.length + 1 })}
+          onSubmit={(data) => createMutation.mutate({ ...data, project_id: projectId, item_number: items.length + 1, tags: [] })}
           isLoading={createMutation.isPending} />
       )}
     </div>

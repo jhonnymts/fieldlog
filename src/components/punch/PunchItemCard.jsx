@@ -2,14 +2,14 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Trash2, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import TagInput from '@/components/shared/TagInput';
 
 const statusStyles = {
-  'Open':        { pill: 'bg-red-500/20 text-red-400 border-red-500/30',          dot: 'bg-red-400' },
-  'In Progress': { pill: 'bg-amber-500/20 text-amber-400 border-amber-500/30',    dot: 'bg-amber-400' },
-  'Closed':      { pill: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30', dot: 'bg-emerald-400' },
+  'Open':        { pill: 'bg-red-500/20 text-red-400 border-red-500/30',              dot: 'bg-red-400' },
+  'In Progress': { pill: 'bg-amber-500/20 text-amber-400 border-amber-500/30',        dot: 'bg-amber-400' },
+  'Closed':      { pill: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',  dot: 'bg-emerald-400' },
 };
 
-// readOnly prop: when true, hides all edit controls (viewer role)
 export default function PunchItemCard({ item, onUpdate, onDelete, readOnly = false }) {
   const [expanded, setExpanded] = useState(false);
   const isClosed = item.status === 'Closed';
@@ -27,7 +27,6 @@ export default function PunchItemCard({ item, onUpdate, onDelete, readOnly = fal
 
   return (
     <div className={`bg-card border rounded-lg overflow-hidden transition-all ${isClosed ? 'border-emerald-500/30 opacity-75' : 'border-border'}`}>
-      {/* Main row */}
       <div className="flex items-center gap-3 p-3 cursor-pointer active:bg-secondary/50" onClick={() => setExpanded(!expanded)}>
         <div className={`h-2.5 w-2.5 rounded-full flex-shrink-0 ${style.dot}`} />
         <div className="flex-1 min-w-0">
@@ -41,9 +40,13 @@ export default function PunchItemCard({ item, onUpdate, onDelete, readOnly = fal
             {item.target_date && <span>Target: {item.target_date}</span>}
             {item.date_closed && <span>Closed: {item.date_closed}</span>}
           </div>
+          {item.tags && item.tags.length > 0 && (
+            <div className="mt-1.5">
+              <TagInput tags={item.tags} onChange={() => {}} readOnly size="xs" />
+            </div>
+          )}
         </div>
 
-        {/* Status action buttons — editors/owners only */}
         {!readOnly && onUpdate && (
           <div className="flex items-center gap-1 flex-shrink-0" onClick={(e) => e.stopPropagation()}>
             {!isClosed ? (
@@ -63,18 +66,21 @@ export default function PunchItemCard({ item, onUpdate, onDelete, readOnly = fal
         {expanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
       </div>
 
-      {/* Expanded detail */}
       {expanded && (
         <div className="border-t border-border p-3 space-y-3 bg-secondary/30">
           {readOnly ? (
-            // Viewer — read-only detail
             <div className="space-y-2 text-sm">
               {item.owner       && <p className="text-muted-foreground">Owner: <span className="text-foreground">{item.owner}</span></p>}
               {item.target_date && <p className="text-muted-foreground">Target: <span className="text-foreground">{item.target_date}</span></p>}
               {item.date_closed && <p className="text-muted-foreground">Closed: <span className="text-foreground">{item.date_closed}</span></p>}
+              {item.tags && item.tags.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs uppercase tracking-wider mb-1">Tags</p>
+                  <TagInput tags={item.tags} onChange={() => {}} readOnly />
+                </div>
+              )}
             </div>
           ) : (
-            // Editor/Owner — full edit controls
             <>
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -90,21 +96,29 @@ export default function PunchItemCard({ item, onUpdate, onDelete, readOnly = fal
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">Owner</label>
-                  <Input value={item.owner || ''} onChange={(e) => onUpdate({ owner: e.target.value })} className="bg-secondary border-border mt-1 h-11" placeholder="Assign..." />
+                  <Input value={item.owner || ''} onChange={(e) => onUpdate({ owner: e.target.value })}
+                    className="bg-secondary border-border mt-1 h-11" placeholder="Assign..." />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">Target Date</label>
-                  <Input type="date" value={item.target_date || ''} onChange={(e) => onUpdate({ target_date: e.target.value })} className="bg-secondary border-border mt-1 h-11" />
+                  <Input type="date" value={item.target_date || ''} onChange={(e) => onUpdate({ target_date: e.target.value })}
+                    className="bg-secondary border-border mt-1 h-11" />
                 </div>
                 <div>
                   <label className="text-xs text-muted-foreground uppercase tracking-wider">Date Closed</label>
-                  <Input type="date" value={item.date_closed || ''} onChange={(e) => onUpdate({ date_closed: e.target.value })} className="bg-secondary border-border mt-1 h-11" />
+                  <Input type="date" value={item.date_closed || ''} onChange={(e) => onUpdate({ date_closed: e.target.value })}
+                    className="bg-secondary border-border mt-1 h-11" />
                 </div>
               </div>
+              <div>
+                <label className="text-xs text-muted-foreground uppercase tracking-wider block mb-1">Tags</label>
+                <TagInput tags={item.tags || []} onChange={(tags) => onUpdate({ tags })} />
+              </div>
               {onDelete && (
-                <button onClick={(e) => { e.stopPropagation(); onDelete(); }} className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1 transition-colors">
+                <button onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                  className="text-xs text-destructive hover:text-destructive/80 flex items-center gap-1 transition-colors">
                   <Trash2 className="h-3 w-3" /> Remove Item
                 </button>
               )}
