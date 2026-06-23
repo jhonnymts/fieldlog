@@ -18,22 +18,19 @@ const ROLE_COLORS = {
 
 function buildInviteLink(projectId, email, role) {
   const base   = window.location.origin;
-  const params = new URLSearchParams({
-    project: projectId,
-    email:   email.trim().toLowerCase(),
-    role,
-  });
+  const params = new URLSearchParams({ project: projectId, email: email.trim().toLowerCase(), role });
   return `${base}/invite?${params.toString()}`;
 }
 
 async function copyToClipboard(text) {
+  // Primary: modern clipboard API
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
       return true;
     }
   } catch { /* fall through */ }
-  // Fallback execCommand
+  // Fallback: execCommand
   try {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -55,7 +52,7 @@ export default function TeamPanel({ projectId }) {
   const [role,       setRole]       = useState('editor');
   const [sending,    setSending]    = useState(false);
   const [copiedId,   setCopiedId]   = useState(null);
-  const [lastInvite, setLastInvite] = useState(null); // {email, role} shown after invite
+  const [lastInvite, setLastInvite] = useState(null); // { email, role } shown after invite
 
   // ── Members ────────────────────────────────────────────────────────────────
   const { data: members = [], isLoading: loadingMembers } = useQuery({
@@ -89,10 +86,7 @@ export default function TeamPanel({ projectId }) {
         .eq('project_id', projectId)
         .eq('status', 'pending')
         .order('created');
-      if (error) {
-        console.warn('invitations query error:', error.message);
-        return [];
-      }
+      if (error) { console.warn('invitations query error:', error.message); return []; }
       return data || [];
     },
   });
@@ -106,11 +100,8 @@ export default function TeamPanel({ projectId }) {
       toast.success('Invite link copied — paste it into email or Slack');
       setTimeout(() => setCopiedId(null), 3000);
     } else {
-      // Clipboard blocked — show the link in the toast so user can copy manually
-      toast.success(`Share this link with ${invEmail}`, {
-        description: link,
-        duration: 15000,
-      });
+      // Clipboard blocked — show the link in a long toast so the user can copy manually
+      toast.success(`Invite link for ${invEmail}`, { description: link, duration: 20000 });
     }
   };
 
@@ -124,48 +115,37 @@ export default function TeamPanel({ projectId }) {
     }
     setSending(true);
     try {
-      // Try RPC to find existing user — gracefully handle if RPC doesn't exist
-      let userId = null;
+      // Step 1: Always upsert an invitation row so the invite link is always valid.
+      // (InviteAccept checks this row when the invitee clicks the link.)
+      const { error: invErr } = await supabase.from('invitations').upsert(
+        { project_id: projectId, invited_email: trimmed, role, invited_by: user.id, status: 'pending' },
+        { onConflict: 'project_id,invited_email' }
+      );
+      if (invErr) throw invErr;
+      queryClient.invalidateQueries({ queryKey: ['projectInvitations', projectId] });
+
+      // Step 2: If the user already has an account, also add them to project_members directly
+      // so they can access the project immediately without clicking the link.
       try {
-        const { data } = await supabase.rpc('get_user_id_by_email', { p_email: trimmed });
-        userId = data || null;
+        const { data: existingUserId } = await supabase.rpc('get_user_id_by_email', { p_email: trimmed });
+        if (existingUserId) {
+          const { error: memberErr } = await supabase.from('project_members').insert({
+            project_id: projectId,
+            user_id:    existingUserId,
+            role,
+            invited_by: user.id,
+          });
+          // Ignore duplicate — they may already be a member
+          if (memberErr && memberErr.code !== '23505') {
+            console.warn('project_members insert warning:', memberErr.message);
+          }
+          queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] });
+        }
       } catch {
-        userId = null; // RPC not available — fall through to invitation path
+        // RPC not available or failed — invitation row is still created, link still works
       }
 
-      if (userId) {
-        // User already has an account — add to project_members directly
-        const { error } = await supabase.from('project_members').insert({
-          project_id: projectId,
-          user_id:    userId,
-          role,
-          invited_by: user.id,
-        });
-        if (error?.code === '23505') {
-          toast.error('This user is already a member');
-          setSending(false);
-          return;
-        }
-        if (error) throw error;
-        queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] });
-      } else {
-        // No account yet — create pending invitation row
-        const { error } = await supabase.from('invitations').insert({
-          project_id:    projectId,
-          invited_email: trimmed,
-          role,
-          invited_by:    user.id,
-          status:        'pending',
-        });
-        if (error?.code === '23505') {
-          // Already invited — that's fine, still copy the link
-        } else if (error) {
-          throw error;
-        }
-        queryClient.invalidateQueries({ queryKey: ['projectInvitations', projectId] });
-      }
-
-      // Always show the invite link banner and auto-copy
+      // Step 3: Show banner and auto-copy the link
       setLastInvite({ email: trimmed, role });
       setEmail('');
       await handleCopyLink(trimmed, role, 'banner');
@@ -179,8 +159,7 @@ export default function TeamPanel({ projectId }) {
   // ── Change role ─────────────────────────────────────────────────────────────
   const changeRoleMutation = useMutation({
     mutationFn: async ({ memberId, newRole }) => {
-      const { error } = await supabase
-        .from('project_members').update({ role: newRole }).eq('id', memberId);
+      const { error } = await supabase.from('project_members').update({ role: newRole }).eq('id', memberId);
       if (error) throw error;
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] }),
@@ -232,9 +211,7 @@ export default function TeamPanel({ projectId }) {
           className="bg-secondary border-border h-10 flex-1"
         />
         <Select value={role} onValueChange={setRole}>
-          <SelectTrigger className="bg-secondary border-border h-10 w-28">
-            <SelectValue />
-          </SelectTrigger>
+          <SelectTrigger className="bg-secondary border-border h-10 w-28"><SelectValue /></SelectTrigger>
           <SelectContent>
             <SelectItem value="editor">Editor</SelectItem>
             <SelectItem value="viewer">Viewer</SelectItem>
@@ -252,7 +229,7 @@ export default function TeamPanel({ projectId }) {
         </Button>
       </div>
 
-      {/* ── Invite link banner — persists after each invite ───────────────── */}
+      {/* ── Invite link banner ────────────────────────────────────────────── */}
       {lastInvite && (
         <div className="rounded-lg border border-primary/30 bg-secondary p-3">
           <div className="flex items-start justify-between gap-3">
@@ -287,9 +264,7 @@ export default function TeamPanel({ projectId }) {
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
                   {member.displayEmail}
-                  {member.isSelf && (
-                    <span className="ml-2 text-xs text-muted-foreground">(you)</span>
-                  )}
+                  {member.isSelf && <span className="ml-2 text-xs text-muted-foreground">(you)</span>}
                 </p>
               </div>
               {member.role === 'owner' || member.isSelf ? (
@@ -298,13 +273,8 @@ export default function TeamPanel({ projectId }) {
                   {ROLE_LABELS[member.role]}
                 </span>
               ) : (
-                <Select
-                  value={member.role}
-                  onValueChange={(v) => changeRoleMutation.mutate({ memberId: member.id, newRole: v })}
-                >
-                  <SelectTrigger className="bg-card border-border h-7 w-24 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
+                <Select value={member.role} onValueChange={(v) => changeRoleMutation.mutate({ memberId: member.id, newRole: v })}>
+                  <SelectTrigger className="bg-card border-border h-7 w-24 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="editor">Editor</SelectItem>
                     <SelectItem value="viewer">Viewer</SelectItem>
@@ -312,11 +282,9 @@ export default function TeamPanel({ projectId }) {
                 </Select>
               )}
               {!member.isSelf && member.role !== 'owner' && (
-                <Button
-                  variant="ghost" size="icon"
+                <Button variant="ghost" size="icon"
                   className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
-                  onClick={() => removeMutation.mutate(member.id)}
-                >
+                  onClick={() => removeMutation.mutate(member.id)}>
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               )}
@@ -325,38 +293,30 @@ export default function TeamPanel({ projectId }) {
         })}
       </div>
 
-      {/* ── Pending invitations (users without accounts yet) ──────────────── */}
+      {/* ── Pending invitations ───────────────────────────────────────────── */}
       {invitations.length > 0 && (
         <div className="space-y-2">
           <p className="text-xs text-muted-foreground uppercase tracking-wider font-medium">
-            Pending — no account yet
+            Pending invitations
           </p>
           {invitations.map((inv) => (
-            <div
-              key={inv.id}
-              className="flex items-center gap-2 border border-dashed border-border rounded-lg px-3 py-2 bg-secondary/40"
-            >
+            <div key={inv.id}
+              className="flex items-center gap-2 border border-dashed border-border rounded-lg px-3 py-2 bg-secondary/40">
               <Clock className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
               <p className="text-sm text-muted-foreground flex-1 truncate">{inv.invited_email}</p>
               <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${ROLE_COLORS[inv.role]}`}>
                 {ROLE_LABELS[inv.role]}
               </span>
-              <Button
-                variant="ghost" size="icon"
+              <Button variant="ghost" size="icon"
                 className={`h-7 w-7 flex-shrink-0 transition-colors ${copiedId === inv.id ? 'text-emerald-400' : 'text-muted-foreground hover:text-primary'}`}
                 onClick={() => handleCopyLink(inv.invited_email, inv.role, inv.id)}
-                title="Copy invite link"
-              >
-                {copiedId === inv.id
-                  ? <Check className="h-3.5 w-3.5" />
-                  : <Copy className="h-3.5 w-3.5" />}
+                title="Copy invite link">
+                {copiedId === inv.id ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
               </Button>
-              <Button
-                variant="ghost" size="icon"
+              <Button variant="ghost" size="icon"
                 className="h-7 w-7 text-muted-foreground hover:text-destructive hover:bg-destructive/10 flex-shrink-0"
                 onClick={() => cancelInviteMutation.mutate(inv.id)}
-                title="Cancel invitation"
-              >
+                title="Cancel invitation">
                 <X className="h-3.5 w-3.5" />
               </Button>
             </div>
