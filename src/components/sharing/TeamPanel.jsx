@@ -17,20 +17,20 @@ const ROLE_COLORS = {
 };
 
 function buildInviteLink(projectId, email, role) {
-  const base   = window.location.origin;
+  // Always use the canonical production URL so preview deployments
+  // don't generate links that require Vercel login.
+  const base   = import.meta.env.VITE_APP_URL || window.location.origin;
   const params = new URLSearchParams({ project: projectId, email: email.trim().toLowerCase(), role });
   return `${base}/invite?${params.toString()}`;
 }
 
 async function copyToClipboard(text) {
-  // Primary: modern clipboard API
   try {
     if (navigator.clipboard && window.isSecureContext) {
       await navigator.clipboard.writeText(text);
       return true;
     }
   } catch { /* fall through */ }
-  // Fallback: execCommand
   try {
     const ta = document.createElement('textarea');
     ta.value = text;
@@ -52,7 +52,7 @@ export default function TeamPanel({ projectId }) {
   const [role,       setRole]       = useState('editor');
   const [sending,    setSending]    = useState(false);
   const [copiedId,   setCopiedId]   = useState(null);
-  const [lastInvite, setLastInvite] = useState(null); // { email, role } shown after invite
+  const [lastInvite, setLastInvite] = useState(null);
 
   // ── Members ────────────────────────────────────────────────────────────────
   const { data: members = [], isLoading: loadingMembers } = useQuery({
@@ -100,7 +100,6 @@ export default function TeamPanel({ projectId }) {
       toast.success('Invite link copied — paste it into email or Slack');
       setTimeout(() => setCopiedId(null), 3000);
     } else {
-      // Clipboard blocked — show the link in a long toast so the user can copy manually
       toast.success(`Invite link for ${invEmail}`, { description: link, duration: 20000 });
     }
   };
@@ -115,8 +114,7 @@ export default function TeamPanel({ projectId }) {
     }
     setSending(true);
     try {
-      // Step 1: Always upsert an invitation row so the invite link is always valid.
-      // (InviteAccept checks this row when the invitee clicks the link.)
+      // Step 1: Always upsert an invitation row so the link is always valid
       const { error: invErr } = await supabase.from('invitations').upsert(
         { project_id: projectId, invited_email: trimmed, role, invited_by: user.id, status: 'pending' },
         { onConflict: 'project_id,invited_email' }
@@ -124,8 +122,7 @@ export default function TeamPanel({ projectId }) {
       if (invErr) throw invErr;
       queryClient.invalidateQueries({ queryKey: ['projectInvitations', projectId] });
 
-      // Step 2: If the user already has an account, also add them to project_members directly
-      // so they can access the project immediately without clicking the link.
+      // Step 2: If user already has an account, also add to project_members directly
       try {
         const { data: existingUserId } = await supabase.rpc('get_user_id_by_email', { p_email: trimmed });
         if (existingUserId) {
@@ -135,17 +132,16 @@ export default function TeamPanel({ projectId }) {
             role,
             invited_by: user.id,
           });
-          // Ignore duplicate — they may already be a member
           if (memberErr && memberErr.code !== '23505') {
             console.warn('project_members insert warning:', memberErr.message);
           }
           queryClient.invalidateQueries({ queryKey: ['projectMembers', projectId] });
         }
       } catch {
-        // RPC not available or failed — invitation row is still created, link still works
+        // RPC not available — invitation row still created, link still works
       }
 
-      // Step 3: Show banner and auto-copy the link
+      // Step 3: Show banner and auto-copy
       setLastInvite({ email: trimmed, role });
       setEmail('');
       await handleCopyLink(trimmed, role, 'banner');
