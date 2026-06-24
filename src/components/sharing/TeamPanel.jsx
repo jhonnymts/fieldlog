@@ -17,8 +17,6 @@ const ROLE_COLORS = {
 };
 
 function buildInviteLink(projectId, email, role) {
-  // Always use the canonical production URL so preview deployments
-  // don't generate links that require Vercel login.
   const base   = import.meta.env.VITE_APP_URL || window.location.origin;
   const params = new URLSearchParams({ project: projectId, email: email.trim().toLowerCase(), role });
   return `${base}/invite?${params.toString()}`;
@@ -61,16 +59,14 @@ export default function TeamPanel({ projectId }) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('project_members')
-        .select('id, user_id, role, created')
+        .select('id, user_id, role, member_email, created')
         .eq('project_id', projectId)
         .order('created');
       if (error) throw error;
       return (data || []).map(m => ({
         ...m,
         isSelf:       m.user_id === user?.id,
-        displayEmail: m.user_id === user?.id
-          ? (user?.email || 'You')
-          : `Member ${m.user_id.slice(0, 8)}…`,
+        displayEmail: m.member_email || (m.user_id === user?.id ? user?.email : `Member ${m.user_id.slice(0, 8)}…`),
       }));
     },
   });
@@ -114,7 +110,7 @@ export default function TeamPanel({ projectId }) {
     }
     setSending(true);
     try {
-      // Step 1: Always upsert an invitation row so the link is always valid
+      // Step 1: Always upsert an invitation row
       const { error: invErr } = await supabase.from('invitations').upsert(
         { project_id: projectId, invited_email: trimmed, role, invited_by: user.id, status: 'pending' },
         { onConflict: 'project_id,invited_email' }
@@ -122,15 +118,16 @@ export default function TeamPanel({ projectId }) {
       if (invErr) throw invErr;
       queryClient.invalidateQueries({ queryKey: ['projectInvitations', projectId] });
 
-      // Step 2: If user already has an account, also add to project_members directly
+      // Step 2: If user already has an account, add to project_members directly
       try {
         const { data: existingUserId } = await supabase.rpc('get_user_id_by_email', { p_email: trimmed });
         if (existingUserId) {
           const { error: memberErr } = await supabase.from('project_members').insert({
-            project_id: projectId,
-            user_id:    existingUserId,
+            project_id:   projectId,
+            user_id:      existingUserId,
             role,
-            invited_by: user.id,
+            invited_by:   user.id,
+            member_email: trimmed,
           });
           if (memberErr && memberErr.code !== '23505') {
             console.warn('project_members insert warning:', memberErr.message);
@@ -141,7 +138,6 @@ export default function TeamPanel({ projectId }) {
         // RPC not available — invitation row still created, link still works
       }
 
-      // Step 3: Show banner and auto-copy
       setLastInvite({ email: trimmed, role });
       setEmail('');
       await handleCopyLink(trimmed, role, 'banner');

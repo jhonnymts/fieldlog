@@ -4,7 +4,7 @@
  * Flow:
  * 1. Not logged in → redirect to /login?redirect=/invite?...
  * 2. Logged in, email matches → auto-accept, redirect to project
- * 3. Logged in, email mismatch → show warning
+ * 3. Logged in, email mismatch → show warning with sign-out button
  * 4. Already a member → just redirect to project
  */
 import React, { useEffect, useState } from 'react';
@@ -15,22 +15,25 @@ import { Users, CheckCircle2, AlertTriangle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 export default function InviteAccept() {
-  const [searchParams]        = useSearchParams();
+  const [searchParams]             = useSearchParams();
   const { user, session, loading, signOut } = useAuth();
-  const navigate              = useNavigate();
-  const [status, setStatus]   = useState('loading'); // loading | accepting | mismatch | already | error | done
-  const [error,  setError]    = useState('');
+  const navigate                   = useNavigate();
+  const [status,      setStatus]   = useState('loading');
+  const [error,       setError]    = useState('');
   const [projectName, setProjectName] = useState('');
 
   const projectId    = searchParams.get('project');
   const invitedEmail = searchParams.get('email')?.toLowerCase();
   const role         = searchParams.get('role') || 'viewer';
 
-  // Redirect to login if not authenticated, preserving the invite URL
+  // Redirect to login if not authenticated
   useEffect(() => {
     if (loading) return;
     if (!session) {
-      navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`, { replace: true });
+      navigate(
+        `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+        { replace: true }
+      );
     }
   }, [session, loading, navigate]);
 
@@ -44,7 +47,7 @@ export default function InviteAccept() {
     setStatus('accepting');
 
     try {
-      // Load project name for display
+      // Load project name
       const { data: project } = await supabase
         .from('projects')
         .select('project_name')
@@ -52,13 +55,13 @@ export default function InviteAccept() {
         .maybeSingle();
       setProjectName(project?.project_name || 'this project');
 
-      // Check email match if invite was for a specific email
+      // Check email match
       if (invitedEmail && user.email?.toLowerCase() !== invitedEmail) {
         setStatus('mismatch');
         return;
       }
 
-      // Check if already a member
+      // Check if already a member — use maybeSingle with no throw
       const { data: existing } = await supabase
         .from('project_members')
         .select('id, role')
@@ -72,13 +75,19 @@ export default function InviteAccept() {
         return;
       }
 
-      // Add to project_members
+      // Insert member row — store email so TeamPanel can display it
       const { error: memberErr } = await supabase
         .from('project_members')
-        .insert({ project_id: projectId, user_id: user.id, role });
+        .insert({
+          project_id:   projectId,
+          user_id:      user.id,
+          role,
+          member_email: user.email?.toLowerCase() || invitedEmail,
+        });
+
       if (memberErr && memberErr.code !== '23505') throw memberErr;
 
-      // Mark any matching invitation as accepted
+      // Mark invitation as accepted
       if (invitedEmail) {
         await supabase
           .from('invitations')
@@ -93,6 +102,14 @@ export default function InviteAccept() {
       setError(err.message || 'Something went wrong');
       setStatus('error');
     }
+  };
+
+  const handleSwitchAccount = async () => {
+    await signOut();
+    navigate(
+      `/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`,
+      { replace: true }
+    );
   };
 
   if (loading || status === 'loading' || status === 'accepting') return (
@@ -131,10 +148,10 @@ export default function InviteAccept() {
         <h2 className="text-xl font-bold text-foreground">Wrong account</h2>
         <p className="text-sm text-muted-foreground">
           This invite was sent to <span className="text-foreground font-medium">{invitedEmail}</span> but
-          you're signed in as <span className="text-foreground font-medium">{user?.email}</span>.
+          you&apos;re signed in as <span className="text-foreground font-medium">{user?.email}</span>.
         </p>
         <p className="text-sm text-muted-foreground">Sign in with the correct account to accept this invite.</p>
-        <Button onClick={async () => { await signOut(); navigate(`/login?redirect=${encodeURIComponent(window.location.pathname + window.location.search)}`, { replace: true }); }} className="bg-primary text-primary-foreground w-full h-12">
+        <Button onClick={handleSwitchAccount} className="bg-primary text-primary-foreground w-full h-12">
           Sign in with a different account
         </Button>
       </div>
